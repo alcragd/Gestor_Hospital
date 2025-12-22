@@ -1,25 +1,25 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const citasRoutes = require('./src/routes/citas.routes');
 
 const app = express();
 const PORT = 3000;
 
 app.use(cors());
-
-// Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Conectar las rutas del módulo de citas
-app.use('/api/citas', citasRoutes);
+// RUTAS
+const citasRoutes = require('./src/routes/citas.routes');
+const authRoutes  = require('./src/routes/authLogin');  // ← ESTA ES LA RUTA CORRECTA
 
-// Mensaje de Bienvenida (Opcional)
+app.use('/api/citas', citasRoutes);
+app.use('/auth', authRoutes);
+
 app.get('/', (req, res) => {
-  res.send('API del Gestor Hospitalario funcionando...');
+  res.send('API del Gestor Hospital funcionando...');
 });
 
 app.listen(PORT, () => {
-    console.log(`Servidor Node.js corriendo en http://localhost:${PORT}`);
+  console.log(`Servidor Node.js corriendo en http://localhost:${PORT}`);
 });

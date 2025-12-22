@@ -71,7 +71,7 @@ exports.getSlotsOcupados = async (req, res) => {
     const { Id_Doctor, Fecha_cita } = req.body;
     try {
         if (!Id_Doctor || !Fecha_cita) {
-             return res.status(400).json({ message: 'Se requiere ID de Doctor y Fecha de Cita.' });
+            return res.status(400).json({ message: 'Se requiere ID de Doctor y Fecha de Cita.' });
         }
         const slotsOcupados = await citaService.obtenerSlotsOcupados(Id_Doctor, Fecha_cita);
         res.status(200).json(slotsOcupados);
@@ -84,7 +84,7 @@ exports.getHorarioTrabajo = async (req, res) => {
     const { Id_Doctor, Fecha } = req.body;
     try {
         if (!Id_Doctor || !Fecha) {
-             return res.status(400).json({ message: 'Se requiere ID de Doctor y Fecha.' });
+            return res.status(400).json({ message: 'Se requiere ID de Doctor y Fecha.' });
         }
         const horario = await citaService.obtenerHorasTrabajoTotal(Id_Doctor, Fecha);
         res.status(200).json(horario);

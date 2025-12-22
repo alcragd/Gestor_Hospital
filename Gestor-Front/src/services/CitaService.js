@@ -29,7 +29,7 @@ class CitaService {
 
     async getEspecialidades() {
         const response = await fetch(`${API_URL}/especialidades`);
-        if (!response.ok) throw new Error('Error al cargar especialidades.');
+        if (!response.ok) throw new Error('Error al cargar especialidades--.');
         return response.json();
     }
     
@@ -57,6 +57,17 @@ class CitaService {
         });
         if (!response.ok) throw new Error('Error al cargar el horario de trabajo.');
         return response.json();
+    }
+
+        async getCitasPaciente(idPaciente) {
+        try {
+            const response = await fetch(`${API_URL}/paciente/${idPaciente}`);
+            if (!response.ok) throw new Error('Error al obtener citas del paciente');
+            return response.json();
+        } catch (error) {
+            console.error('Error en CitaService.getCitasPaciente:', error);
+            throw error;
+        }
     }
 
 }

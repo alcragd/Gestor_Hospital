@@ -1,4 +1,60 @@
 <template>
+  <!-- PANEL DESLIZABLE ALAN   -->
+<div class="sidebar" :class="{ open: sidebarOpen }">
+  <div class="sidebar-header">
+    <h4 class="text-center">_Mi Perfil</h4>
+<button class="btn btn-sm btn-danger" @click="logout">Cerrar Sesión</button>
+  </div>
+
+  <hr>
+
+  <div class="sidebar-section">
+    <h6>Datos Personales</h6>
+    <p><strong>Nombre:</strong> {{ user.nombre || 'No disponible' }}</p>
+    <p><strong>Correo:</strong> {{ user.correo || 'No disponible' }}</p>
+    <p><strong>Teléfono:</strong> {{ user.telefono || 'No disponible' }}</p>
+  </div>
+
+  <hr>
+
+  <div class="sidebar-section">
+    <h6>Mis Citas</h6>
+
+    <p v-if="citas.length === 0" class="text-muted small">No tienes citas agendadas.</p>
+
+    <ul v-else class="list-unstyled">
+      <li v-for="c in citas" :key="c.Folio_Cita" class="mb-3 pb-2 border-bottom">
+        <!-- Fecha -->
+        <div>
+          <strong v-if="c.Fecha_Cita">📅 {{ c.Fecha_Cita }}</strong>
+          <span v-else class="text-muted">Sin fecha</span>
+        </div>
+        
+        <!-- Hora -->
+        <div v-if="c.Hora_Inicio" class="text-muted small">
+          🕐 {{ c.Hora_Inicio }}<span v-if="c.Hora_Fin"> - {{ c.Hora_Fin }}</span>
+        </div>
+        
+        <!-- Doctor -->
+        <div class="text-muted small">
+          👨‍⚕️ Dr. {{ c.Nombre_Doctor || 'No asignado' }}
+        </div>
+        
+        <!-- Especialidad -->
+        <div class="text-primary small fw-semibold">
+          🏥 {{ c.Especialidad || 'Sin especialidad' }}
+        </div>
+      </li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- BOTÓN PARA ABRIR EL PANEL -->
+<button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen">
+  ☰
+</button>
+
   <div class="form-wrapper">
     <div class="card shadow-sm form-card">
       <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
@@ -67,7 +123,7 @@
                   type="button"
                   class="btn btn-outline-primary btn-slot"
                   :class="{ 'active btn-primary text-white': cita.Hora_Inicio === slot.inicio }"
-                  @click="seleccionarSlot(slot)"
+                  @click="seleccionarSlot(slot)" 
                 >
                   {{ slot.inicio.substring(0,5) }} - {{ slot.fin.substring(0,5) }}
                 </button>
@@ -123,256 +179,504 @@ export default {
   name: 'FormularioCita',
   data() {
     return {
-      // Estado inicial del formulario (debe coincidir con las propiedades del JSON de la API)
+      // Estado inicial del formulario
       cita: {
         Id_Doctor: null,
         Id_Paciente: null,
         Fecha_Cita: '',
-        Hora_Inicio: '', // <-- vacío para que la sección no aparezca inicialmente
+        Hora_Inicio: '',
         Hora_Fin: '',
-        Usuario: 'Web_Recepcion', // Usuario por defecto para el registro en Bitacora
+        Usuario: 'Web_Recepcion',
       },
 
       // Datos para la selección secuencial
-        especialidades: [],
-        doctores: [],
-        slotsOcupados: [],
-        slotsDisponibles: [], // <-- Aquí guardaremos los horarios calculados
-        
-        // Parámetros de selección
-        selected: {
-            especialidadId: null,
-            doctorId: null,
-            fecha: new Date().toISOString().slice(0, 10), // Fecha actual por defecto
-        },
+      especialidades: [],
+      doctores: [],
+      slotsOcupados: [],
+      slotsDisponibles: [],
+      
+      // Parámetros de selección
+      selected: {
+        especialidadId: null,
+        doctorId: null,
+        fecha: new Date().toISOString().slice(0, 10),
+      },
 
       isLoading: false,
       mensaje: '',
       isSuccess: false,
+      sidebarOpen: false,
+
+      user: {
+        nombre: "",
+        correo: "",
+        telefono: ""
+      },
+
+      citas: []
     };
   },
 
   computed: {
-        // Devuelve la fecha mínima permitida (hoy + 2 días)
-        minDate() {
-            const today = new Date();
-            today.setDate(today.getDate() + 2); 
-            return today.toISOString().slice(0, 10);
-        },
-        // Devuelve la fecha máxima permitida (hoy + 3 meses)
-        maxDate() {
-            const today = new Date();
-            today.setMonth(today.getMonth() + 3);
-            return today.toISOString().slice(0, 10);
-        },
-
-        // Nueva: indica si hay un horario válido seleccionado
-        hasSlotSelected() {
-            // considerar válido sólo si hay doctor, fecha y horas en formato HH:MM[:SS]
-            const horaRegex = /^\d{2}:\d{2}(:\d{2})?$/;
-            return !!this.cita.Id_Doctor &&
-                   !!this.cita.Fecha_Cita &&
-                   horaRegex.test(this.cita.Hora_Inicio) &&
-                   horaRegex.test(this.cita.Hora_Fin);
-        }
+    minDate() {
+      const today = new Date();
+      today.setDate(today.getDate() + 2); 
+      return today.toISOString().slice(0, 10);
+    },
+    
+    maxDate() {
+      const today = new Date();
+      today.setMonth(today.getMonth() + 3);
+      return today.toISOString().slice(0, 10);
     },
 
-  // <-- agregado: llamar al cargarEspecialidades cuando se monta el componente
+    hasSlotSelected() {
+      const horaRegex = /^\d{2}:\d{2}(:\d{2})?$/;
+      return !!this.cita.Id_Doctor &&
+            !!this.cita.Fecha_Cita &&
+            horaRegex.test(this.cita.Hora_Inicio) &&
+            horaRegex.test(this.cita.Hora_Fin);
+    }
+  },
+
   mounted() {
+    console.log("=== MOUNTED - FormularioCita ===");
+    console.log("LocalStorage:", { ...localStorage });
+    
     this.cargarEspecialidades();
+    this.cargarUsuario();
+    this.cargarCitas();
   },
 
   methods: {
-    // 1. Cargar la lista inicial de especialidades
     async cargarEspecialidades() {
-        try {
-            const data = await CitaService.getEspecialidades();
-            
-            console.log("Especialidades recibidas:", data);
-
-            
-            this.especialidades = Array.isArray(data)
-              ? data
-              : (data && (data.data || data.result)) || [];
-        } catch (e) {
-            this.mensaje = 'Error al cargar las especialidades.';
-        }
+      try {
+        const data = await CitaService.getEspecialidades();
+        console.log("Especialidades recibidas:", data);
+        
+        this.especialidades = Array.isArray(data)
+          ? data
+          : (data && (data.data || data.result)) || [];
+      } catch (e) {
+        this.mensaje = 'Error al cargar las especialidades.';
+      }
     },
     
-    // 2. Cuando cambia la especialidad, cargar doctores
     async especialidadSeleccionada() {
-        this.doctores = []; // Limpiar lista
-        this.selected.doctorId = null;
-        this.slotsDisponibles = [];
-        this.cita.Hora_Inicio = '';
-        this.cita.Hora_Fin = '';
-        this.cita.Id_Doctor = null;
-        
-        if (this.selected.especialidadId) {
-            try {
-                this.doctores = await CitaService.getDoctores(this.selected.especialidadId);
-            } catch (e) {
-                this.mensaje = 'Error al cargar doctores.';
-            }
+      this.doctores = [];
+      this.selected.doctorId = null;
+      this.slotsDisponibles = [];
+      this.cita.Hora_Inicio = '';
+      this.cita.Hora_Fin = '';
+      this.cita.Id_Doctor = null;
+      
+      if (this.selected.especialidadId) {
+        try {
+          this.doctores = await CitaService.getDoctores(this.selected.especialidadId);
+        } catch (e) {
+          this.mensaje = 'Error al cargar doctores.';
         }
+      }
     },
     
-    // 3. Cuando cambia el doctor o la fecha, calcular disponibilidad
     async actualizarDisponibilidad() {
-    this.cita.Hora_Inicio = '';
-    this.cita.Hora_Fin = '';
-    this.slotsDisponibles = [];
-    if (!this.selected.doctorId || !this.selected.fecha) return;
+      this.cita.Hora_Inicio = '';
+      this.cita.Hora_Fin = '';
+      this.slotsDisponibles = [];
+      
+      if (!this.selected.doctorId || !this.selected.fecha) return;
 
-    try {
-        // 1. Obtener slots ocupados
+      try {
         this.slotsOcupados = await CitaService.getSlotsOcupados(
-            this.selected.doctorId,
-            this.selected.fecha
+          this.selected.doctorId,
+          this.selected.fecha
         );
         
-        // 2. OBTENER RANGOS DE TRABAJO TOTALES DEL BACK
         const rangosTrabajo = await CitaService.getHorarioTrabajo(
-            this.selected.doctorId, 
-            this.selected.fecha
+          this.selected.doctorId, 
+          this.selected.fecha
         );
         
-        // Si el doctor no trabaja ese día, el array estará vacío
         if (rangosTrabajo.length === 0) {
-            this.slotsDisponibles = [];
-            this.mensaje = 'El doctor no trabaja en la fecha seleccionada.';
-            return;
+          this.slotsDisponibles = [];
+          this.mensaje = 'El doctor no trabaja en la fecha seleccionada.';
+          return;
         }
 
-        // 3. Generar y Filtrar los slots disponibles
         this.slotsDisponibles = this.calcularSlotsDisponibles(rangosTrabajo);
-        this.mensaje = ''; // Limpiar mensaje de no disponibilidad si funciona
+        this.mensaje = '';
 
-    } catch (e) {
+      } catch (e) {
         this.mensaje = `Error al cargar la disponibilidad: ${e.message}`;
-    }
-},
+      }
+    },
     
-
     calcularSlotsDisponibles(rangosTrabajo) {
-    const slots = [];
-    const duracionCitaMinutos = 30; // Duración estándar de 30 min
-    for (const rango of rangosTrabajo) {
-        // Usamos una fecha ficticia ('2000/01/01') para crear objetos Date válidos con la hora
+      const slots = [];
+      const duracionCitaMinutos = 30;
+      
+      for (const rango of rangosTrabajo) {
         let horaActual = new Date(`2000/01/01 ${rango.Hora_Inicio}`);
         const horaFinRango = new Date(`2000/01/01 ${rango.Hora_Fin}`);
 
         while (horaActual < horaFinRango) {
-            // Calcular el fin del slot (1 hora después)
-            const finSlot = new Date(horaActual.getTime() + duracionCitaMinutos * 60000);
-            
-            // Si el slot excede el fin del rango de trabajo, rompemos el ciclo
-            if (finSlot > horaFinRango) {
-                break; 
-            }
-            
-            // Formatear las horas a HH:MM:SS para comparación (toISOString es más seguro, pero toTimeString funciona si solo quieres la hora)
-            // Usamos una función auxiliar para asegurar el formato HH:MM:SS
-            const formatTime = (date) => date.toTimeString().split(' ')[0];
-            const horaInicioStr = formatTime(horaActual);
-            
-            // Verificar si este slot ya está ocupado
-            const estaOcupado = this.slotsOcupados.some(ocupado => {
-                // Compara el inicio del slot con la Hora_Inicio de las citas ocupadas
-                return ocupado.Hora_Inicio === horaInicioStr;
-            });
+          const finSlot = new Date(horaActual.getTime() + duracionCitaMinutos * 60000);
+          
+          if (finSlot > horaFinRango) break;
+          
+          const formatTime = (date) => date.toTimeString().split(' ')[0];
+          const horaInicioStr = formatTime(horaActual);
+          
+          const estaOcupado = this.slotsOcupados.some(ocupado => {
+            return ocupado.Hora_Inicio === horaInicioStr;
+          });
 
-            if (!estaOcupado) {
-                // Si no está ocupado, añadimos el slot disponible
-                slots.push({ inicio: horaInicioStr, fin: formatTime(finSlot) });
-            }
+          if (!estaOcupado) {
+            slots.push({ inicio: horaInicioStr, fin: formatTime(finSlot) });
+          }
 
-            // Mover a la siguiente hora
-            horaActual = finSlot;
+          horaActual = finSlot;
         }
+      }
+      return slots;
+    },
+    // Agrega este método en la sección de methods:
+seleccionarSlot(slot) {
+    console.log("🎯 seleccionarSlot ejecutado");
+    console.log("  Slot:", slot);
+    console.log("  selected.doctorId:", this.selected.doctorId);
+    
+    const userId = localStorage.getItem("userId");
+    console.log("  userId desde localStorage:", userId);
+    
+    if (!userId) {
+        console.error("❌ No hay userId para agendar cita");
+        this.mensaje = "Error: No estás autenticado";
+        return;
     }
-    return slots;
+    
+    // Convertir a número
+    const pacienteId = parseInt(userId, 10);
+    console.log("  pacienteId (convertido a número):", pacienteId);
+    
+    if (isNaN(pacienteId)) {
+        console.error("❌ userId no es un número válido:", userId);
+        this.mensaje = "Error: ID de paciente inválido";
+        return;
+    }
+    
+    // Asignar datos a la cita
+    this.cita.Id_Doctor = this.selected.doctorId;
+    this.cita.Id_Paciente = pacienteId;
+    this.cita.Fecha_Cita = this.selected.fecha;
+    this.cita.Hora_Inicio = slot.inicio;
+    this.cita.Hora_Fin = slot.fin;
+    
+    console.log("✅ Cita configurada:");
+    console.log("  - Doctor ID:", this.cita.Id_Doctor);
+    console.log("  - Paciente ID:", this.cita.Id_Paciente);
+    console.log("  - Fecha:", this.cita.Fecha_Cita);
+    console.log("  - Hora Inicio:", this.cita.Hora_Inicio);
+    console.log("  - Hora Fin:", this.cita.Hora_Fin);
+    
+    this.mensaje = `✅ Horario ${slot.inicio.substring(0,5)} seleccionado. Presiona "Confirmar Cita".`;
 },
 
     async submitCita() {
-      // 1. Limpiar mensajes y activar loading
       this.mensaje = '';
       this.isLoading = true;
       this.isSuccess = false;
 
-      // 2. Función auxiliar para asegurar formato HH:MM:SS
       const formatearHora = (hora) => {
         if (!hora) return '';
-        // Si es string en formato HH:MM o HH:MM:SS, devolverlo como está
         if (typeof hora === 'string' && /^\d{2}:\d{2}/.test(hora)) {
           return hora.length === 5 ? `${hora}:00` : hora.substring(0, 8);
         }
-        // Si es objeto Date, extraer la hora
         if (hora instanceof Date) {
           return hora.toLocaleTimeString('es-ES', { hour12: false }).substring(0, 8);
         }
         return hora;
       };
 
-      // 3. Crear el objeto de datos para enviar (asegurando el formato correcto)
       const dataToSend = {
-          ...this.cita,
-          Hora_Inicio: formatearHora(this.cita.Hora_Inicio),
-          Hora_Fin: formatearHora(this.cita.Hora_Fin),
+        ...this.cita,
+        Hora_Inicio: formatearHora(this.cita.Hora_Inicio),
+        Hora_Fin: formatearHora(this.cita.Hora_Fin),
       };
 
       console.log('Datos a enviar:', dataToSend);
 
       try {
-        // 4. Llamar al servicio de backend
         const response = await CitaService.crearCita(dataToSend);
-        
-        // 5. Manejar éxito
         this.mensaje = response.message || 'Cita creada exitosamente.';
         this.isSuccess = true;
         this.resetForm();
+        // ⭐ Recargar las citas después de crear una nueva
+        await this.cargarCitas();
         
       } catch (error) {
-        // 6. Manejar error
         this.mensaje = `Fallo al agendar: ${error.message}`;
         this.isSuccess = false;
         
       } finally {
-        // 7. Desactivar loading
         this.isLoading = false;
       }
     },
 
-    seleccionarSlot(slot) {
-        this.cita.Id_Doctor = this.selected.doctorId;
-        this.cita.Id_Paciente = 3; // ID de prueba o del usuario logueado
-        this.cita.Fecha_Cita = this.selected.fecha;
-        this.cita.Hora_Inicio = slot.inicio.substring(0, 8); 
-        this.cita.Hora_Fin = slot.fin.substring(0, 8);       
-        this.mensaje = `Slot ${slot.inicio} seleccionado. Presione Confirmar Cita.`;
-    },
+    logout() {
+
+    window.location.href = "/login.html";
+  },
+seleccionarSlot(slot) {
+  const pacienteId = localStorage.getItem("userId");
+  
+  this.cita.Id_Doctor = this.selected.doctorId;
+  this.cita.Id_Paciente = parseInt(pacienteId, 10); // ⭐ Convertir a número
+  this.cita.Fecha_Cita = this.selected.fecha;
+  this.cita.Hora_Inicio = slot.inicio.substring(0, 8); 
+  this.cita.Hora_Fin = slot.fin.substring(0, 8);       
+  this.mensaje = `Slot ${slot.inicio} seleccionado. Presione Confirmar Cita.`;
+},
     
     resetForm() {
-        // Reiniciar solo los campos críticos
-        this.cita.Fecha_Cita = '';
-        this.cita.Id_Doctor = null;
-        this.cita.Hora_Inicio = '';
-        this.cita.Hora_Fin = '';
-        // Mantener el Id_Paciente para agilizar la prueba
+      this.cita.Fecha_Cita = '';
+      this.cita.Id_Doctor = null;
+      this.cita.Hora_Inicio = '';
+      this.cita.Hora_Fin = '';
+    },
+
+// En FormularioCita.vue - MÉTODO cargarUsuario CORREGIDO
+cargarUsuario() {
+    console.log("🔍 EJECUTANDO cargarUsuario()");
+    
+    // ⭐ OBTENER userId (este es el ID_Paciente desde login)
+    const userId = localStorage.getItem("userId");
+    const nombre = localStorage.getItem("nombre");
+    const paterno = localStorage.getItem("paterno");
+    const correo = localStorage.getItem("correo");
+    const telefono = localStorage.getItem("telefono");
+
+    console.log("📊 Datos obtenidos de localStorage:");
+    console.log("  - userId:", userId, "(tipo:", typeof userId, ")");
+    console.log("  - nombre:", nombre);
+    console.log("  - paterno:", paterno);
+    
+    // ⭐⭐ VERIFICACIÓN SIMPLIFICADA - SOLO userId ⭐⭐
+    if (!userId) {
+        console.error("❌ CRÍTICO: No se encontró 'userId' en localStorage");
+        console.error("  localStorage contiene:");
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            console.error(`    ${key}: ${localStorage.getItem(key)}`);
+        }
+        
+        // Mostrar mensaje en la UI
+        this.mensaje = "❌ Error: No estás autenticado. Serás redirigido al login...";
+        this.isSuccess = false;
+        
+        // Redirigir después de 5 segundos (para debugging)
+                    window.location.href = "/login.html";
+
+        setTimeout(() => {
+            console.log("🔄 Redirigiendo a login.html...");
+            window.location.href = "/login.html";
+        }, 5000);
+        
+        return;
     }
+    
+    console.log("✅ Usuario autenticado correctamente");
+    console.log("✅ userId encontrado:", userId);
+
+    // Cargar datos del usuario para mostrar en sidebar
+    this.user = { 
+        nombre: `${nombre} ${paterno}`.trim() || "Usuario", 
+        correo: correo || "Sin correo", 
+        telefono: telefono || "Sin teléfono" 
+    };
+    
+    console.log("✅ Datos del sidebar cargados:", this.user);
+},
+
+    async cargarCitas() {
+      try {
+        const userId = localStorage.getItem("userId");
+        
+        // ⭐ Validación
+        if (!userId) {
+          console.warn("No hay userId en localStorage");
+          this.citas = [];
+          return;
+        }
+        
+        console.log("🔍 Cargando citas para paciente ID:", userId);
+        
+        const citasRaw = await CitaService.getCitasPaciente(userId);
+        
+        console.log("📥 RAW CITAS:", citasRaw);
+        if (citasRaw.length > 0) {
+      console.log("📋 PRIMERA CITA:", citasRaw[0]);
+      console.log("🆔 ID_Paciente de primera cita:", citasRaw[0].ID_Paciente);
+      console.log("🆔 userId del localStorage:", userId);
+      console.log("🔍 ¿Coinciden?", citasRaw[0].ID_Paciente == userId);
+    }
+
+        const formatFecha = (fechaStr) => {
+          if (!fechaStr) return '';
+          
+          try {
+            const fecha = new Date(fechaStr);
+            if (isNaN(fecha.getTime())) {
+              console.warn('Fecha inválida:', fechaStr);
+              return '';
+            }
+            return fecha.toISOString().split('T')[0];
+          } catch (error) {
+            console.warn('Error parseando fecha:', fechaStr, error);
+            return '';
+          }
+        };
+
+        const formatHora = (horaStr) => {
+          if (!horaStr) return '';
+          
+          try {
+            if (typeof horaStr === 'string' && horaStr.includes('T')) {
+              const fecha = new Date(horaStr);
+              if (isNaN(fecha.getTime())) {
+                console.warn('Hora ISO inválida:', horaStr);
+                return '';
+              }
+              
+              const horas = fecha.getUTCHours().toString().padStart(2, '0');
+              const minutos = fecha.getUTCMinutes().toString().padStart(2, '0');
+              return `${horas}:${minutos}`;
+            }
+            
+            if (/^\d{2}:\d{2}/.test(horaStr)) {
+              return horaStr.substring(0, 5);
+            }
+            
+            console.warn('Formato de hora no reconocido:', horaStr);
+            return '';
+          } catch (error) {
+            console.warn('Error parseando hora:', horaStr, error);
+            return '';
+          }
+        };
+
+        // ⭐ Filtrar solo citas del usuario actual
+    this.citas = citasRaw
+      .filter(c => {
+        const coincide = c.ID_Paciente == userId;
+        if (!coincide) {
+          console.warn(`⚠️ Cita ${c.Folio_Cita} filtrada: ID_Paciente=${c.ID_Paciente} vs userId=${userId}`);
+        }
+        return coincide;
+      })
+      .map(c => ({
+        ...c,
+        Fecha_Cita: formatFecha(c.Fecha_cita),
+        Hora_Inicio: formatHora(c.Hora_Inicio),
+        Hora_Fin: formatHora(c.Hora_Fin),
+      }));
+
+    console.log(`✅ Total de citas después del filtro: ${this.citas.length}`);
+    if (this.citas.length > 0) {
+      console.log("📋 Primera cita procesada:", this.citas[0]);
+    }
+
+  } catch (error) {
+    console.error("❌ Error cargando citas:", error);
+    this.citas = [];
   }
+  }
+}
+
 };
 </script>
 
 <style scoped>
-/* Wrapper centra el card y le da espacio lateral */
 .form-wrapper {
   display: flex;
   justify-content: center;
   padding: 1.25rem;
 }
 
-/* Card más amplio y responsivo: mínimo para evitar "aplastamiento" y máximo para no estirar demasiado */
+.sidebar {
+  position: fixed;
+  left: -280px;
+  top: 0;
+  width: 260px;
+  height: 100%;
+  background: #ffffff;
+  border-right: 1px solid #ddd;
+  box-shadow: 2px 0px 10px rgba(0,0,0,0.1);
+  padding: 15px;
+  transition: 0.30s ease;
+  z-index: 2000;
+  overflow-y: auto;
+}
+
+.sidebar.open {
+  left: 0;
+}
+
+.sidebar-toggle {
+  position: fixed;
+  left: 10px;
+  top: 10px;
+  z-index: 2100;
+  background: #0d6efd;
+  color: #fff;
+  border: none;
+  font-size: 20px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sidebar-section {
+  margin-bottom: 15px;
+}
+
+.sidebar-section h6 {
+  margin-bottom: 10px;
+  font-weight: bold;
+  color: #0d6efd;
+}
+
+.sidebar-section ul {
+  padding-left: 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.sidebar-section li {
+  padding: 8px;
+  transition: background-color 0.2s;
+}
+
+.sidebar-section li:hover {
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.sidebar-section .border-bottom {
+  border-bottom: 1px solid #e9ecef !important;
+}
+
+.sidebar-section .border-bottom:last-child {
+  border-bottom: none !important;
+}
+
 .form-card {
   width: 100%;
   max-width: 1024px;
@@ -381,43 +685,45 @@ export default {
   box-sizing: border-box;
 }
 
-/* Mejor separación vertical para evitar "aplaste" en pantallas pequeñas */
-.form-card .card-body { padding: 1.5rem; }
+.form-card .card-body { 
+  padding: 1.5rem; 
+}
 
-/* Áreas para horarios: aseguran altura mínima y scroll si hay muchos slots */
 .slot-area {
   display: flex;
-  flex-wrap: wrap;     /* permitir que los botones envuelvan */
+  flex-wrap: wrap;
   gap: 0.5rem;
   max-height: 240px;
   overflow-y: auto;
   padding: 6px;
 }
 
-/* Mostrar un área mínima cuando no hay slots para que el diseño respire */
 .min-slot-area {
   min-height: 120px;
 }
 
-/* Botones de slot: permitir encogerse en pantallas pequeñas para evitar overflow horizontal */
 .btn-slot {
-  min-width: 84px;     /* reducir min-width para no forzar ancho excesivo */
-  flex: 0 1 auto;      /* permitir que el botón crezca/encoga */
+  min-width: 84px;
+  flex: 0 1 auto;
   white-space: nowrap;
 }
 
-/* Tarjeta de selección más compacta en mobile */
 .selected-card {
   background: #f8f9fa;
 }
 
-/* Ajustes responsivos extra */
 @media (max-width: 768px) {
-  .btn-slot { min-width: 72px; font-size: 0.92rem; }
-  .form-card { margin: 0.5rem; padding: 0.1rem; }
+  .btn-slot { 
+    min-width: 72px; 
+    font-size: 0.92rem; 
+  }
+  .form-card { 
+    margin: 0.5rem; 
+    padding: 0.1rem; 
+    min-width: auto;
+  }
 }
 
-/* pequeño ajuste para evitar que inputs/selects se compriman demasiado */
 .form-card .form-control,
 .form-card .form-select {
   min-width: 0;

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Gestor Hospital</title>
+            <link rel="icon" href="/logo.ico" type="image/png" sizes="32x32">
+
+
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #E3F2FD;
+            font-family: 'Roboto', sans-serif;
+        }
+
+    .card {
+        width: 380px;
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0px 4px 20px rgba(0,0,0,0.15);
+        box-sizing: border-box;
+
+        max-height: 90vh;       /* 👈 altura máxima */
+        overflow-y: auto;       /* 👈 activa scroll interno */
+    }
+
+
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #0D47A1;
+            font-weight: 500;
+        }
+
+        .input-field {
+            width: 100%;
+            margin-bottom: 15px;
+            box-sizing: border-box; 
+        }
+
+        .input-field input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #90CAF9;
+            font-size: 15px;
+            outline: none;
+            transition: 0.2s;
+            box-sizing: border-box; 
+        }
+
+        .input-field input:focus {
+            border-color: #1565C0;
+            box-shadow: 0 0 5px rgba(21,101,192,0.4);
+        }
+
+        .btn {
+            width: 100%;
+            background: #1976D2;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: 500;
+            box-sizing: border-box; 
+        }
+
+        .btn:hover {
+            background: #0D47A1;
+        }
+
+        .link {
+            text-align: center;
+            margin-top: 15px;
+            color: #1976D2;
+            cursor: pointer;
+        }
+
+        #registerForm {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+        <div id="mensaje" 
+        style="
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1976D2;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.2);
+            font-size: 15px;
+            font-weight: 500;
+            display: none;
+            z-index: 9999;
+            transition: opacity 0.4s ease;
+        ">
+    </div>
+
+    <!-- LOGIN -->
+    <div class="card" id="loginForm">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <!-- Imagen con estilo en línea para limitar su tamaño -->
+            <!-- Reemplaza 'URL_DE_TU_IMAGEN.png' con la ruta real de tu archivo -->
+            <img src="logo.ico" 
+                alt="Logo de la aplicación" 
+                style="max-width: 100px; height: auto; width: 100%;">
+        </div>
+        <h2>Iniciar Sesión</h2>
+
+        <div class="input-field">
+            <input type="text" id="username" placeholder="Usuario" />
+        </div>
+
+        <div class="input-field">
+            <input type="password" id="password" placeholder="Contraseña" />
+        </div>
+
+        <button class="btn" onclick="login()">Ingresar</button>
+
+        <div class="link" onclick="showRegister()">
+            ¿No tienes cuenta? Crear usuario
+        </div>
+    </div>
+
+
+    <!-- REGISTRO -->
+    <!-- REGISTRO COMPLETO -->
+<div class="card" id="registerForm" style="display:none;">
+    
+    <div style="text-align: center; margin-bottom: 20px;">
+        <img src="logo.ico" 
+            alt="Logo de la aplicación" 
+            style="max-width: 100px; height: auto; width: 100%;">
+    </div>
+
+    <h2>Crear Usuario</h2>
+
+    <!-- SISTEMA -->
+    <div class="input-field">
+        <input type="text" id="regUser" placeholder="Nombre de Usuario" />
+    </div>
+
+    <div class="input-field">
+        <input type="password" id="regPass" placeholder="Contraseña de Usuario" />
+    </div>
+
+    <!-- PERSONALES -->
+    <div class="input-field">
+        <input type="text" id="regNombre" placeholder="Nombre Paciente" />
+    </div>
+
+    <div class="input-field">
+        <input type="text" id="regPaterno" placeholder="Apellido Paterno " />
+    </div>
+
+    <div class="input-field">
+        <input type="text" id="regMaterno" placeholder="Apellido Materno (Opcional)" />
+    </div>
+
+    <div class="input-field">
+        <input type="text" id="regDNI" placeholder="DNI / CURP" maxlength="18" />
+    </div>
+
+    <div class="input-field">
+        <label style="font-size:14px; color:#555;">Fecha de nacimiento</label>
+        <input type="date" id="regFechaNac" />
+    </div>
+
+    <div class="input-field">
+        <select id="regSexo" style="width:100%; padding:12px; border-radius:6px; border:1px solid #90CAF9;">
+            <option value="">Seleccione sexo</option>
+            <option value="M">Masculino</option>
+            <option value="F">Femenino</option>
+            <option value="N">Prefiero no Decirlo</option>
+        </select>
+    </div>
+
+    <div class="input-field">
+        <input type="number" id="regEdad" placeholder="Edad" readonly />
+    </div>
+
+    <div class="input-field">
+        <input type="email" id="regEmail" placeholder="Correo electrónico" />
+    </div>
+
+    <div class="input-field">
+        <input type="text" id="regPhone" placeholder="Teléfono celular" />
+    </div>
+
+    <div class="input-field">
+        <input type="text" id="regEmergencia" placeholder="Teléfono de emergencia" />
+    </div>
+
+    <button class="btn" onclick="register()">Crear cuenta</button>
+
+    <div class="link" onclick="showLogin()">
+        Volver al inicio de sesión
+    </div>
+</div>
+
+<script>
+    // CALCULAR EDAD AUTOMÁTICA
+    document.getElementById("regFechaNac").addEventListener("change", () => {
+        const fecha = new Date(document.getElementById("regFechaNac").value);
+        if (!isNaN(fecha)) {
+            const hoy = new Date();
+            let edad = hoy.getFullYear() - fecha.getFullYear();
+            const m = hoy.getMonth() - fecha.getMonth();
+            if (m < 0 || (m === 0 && hoy.getDate() < fecha.getDate())) edad--;
+            document.getElementById("regEdad").value = edad;
+        }
+    });
+</script>
+
+
+    <script src="/login.js"></script>
+
+
+</body>
+</html>

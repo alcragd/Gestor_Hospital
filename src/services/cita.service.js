@@ -45,29 +45,31 @@ class CitaService {
     
     // --- LÓGICA PARA OBTENER CITAS DEL PACIENTE ---
     async obtenerCitasPaciente(pacienteId) {
-        let pool;
-        try {
-            pool = await db.connect();
-            
-            // *1. Consultar la Vista de SQL para Citas Completas*
-            const request = pool.request();
-            
-            // NOTA: La vista VW_Citas_Completas_Paciente NO tiene un filtro de ID_Paciente, 
-            // por lo que filtraremos aquí para el usuario logueado.
-            const result = await request.query(
-                `SELECT * FROM VW_Citas_Completas_Paciente 
-                 WHERE ID_Paciente = 3
-                 ORDER BY Fecha_cita DESC, Hora_Inicio DESC`
-            );
-            
-            return result.recordset;
-        } catch (error) {
-            console.error('Error al obtener citas:', error);
-            throw new Error('Error de base de datos al obtener citas.');
-        } finally {
-            if (pool) pool.close();
-        }
+    let pool;
+    try {
+        pool = await db.connect();
+        
+        console.log('🔍 Consultando citas para paciente ID:', pacienteId);
+        
+        const request = pool.request()
+            .input('pacienteId', db.sql.Int, pacienteId);  // ⭐ AGREGAR PARÁMETRO
+        
+        const result = await request.query(
+            `SELECT * FROM VW_Citas_Completas_Paciente 
+            WHERE ID_Paciente = @pacienteId  -- ⭐ USAR PARÁMETRO, NO 3
+            ORDER BY Fecha_cita DESC, Hora_Inicio DESC`
+        );
+        
+        console.log(`✅ Se encontraron ${result.recordset.length} citas para paciente ${pacienteId}`);
+        
+        return result.recordset;
+    } catch (error) {
+        console.error('❌ Error al obtener citas:', error);
+        throw new Error('Error de base de datos al obtener citas.');
+    } finally {
+        if (pool) pool.close();
     }
+}
 
     async obtenerEspecialidades() {
         let pool;
@@ -82,6 +84,7 @@ class CitaService {
             `);
             return result.recordset;
         } catch (error) {
+            console.error('Error detallado en obtenerEspecialidadeeees:', error.message);
             throw new Error('Error al obtener especialidades.');
         } finally {
             if (pool) pool.close();

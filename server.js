@@ -12,9 +12,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // RUTAS
 const citasRoutes = require('./src/routes/citas.routes');
 const authRoutes  = require('./src/routes/authLogin');  // ← ESTA ES LA RUTA CORRECTA
+const pagosRoutes = require('./src/routes/pagos.routes');
+const cancelacionesRoutes = require('./src/routes/cancelaciones.routes');
 
 app.use('/api/citas', citasRoutes);
 app.use('/auth', authRoutes);
+app.use('/api/pagos', pagosRoutes);
+app.use('/api/cancelaciones', cancelacionesRoutes);
 
 app.get('/', (req, res) => {
   res.send('API del Gestor Hospital funcionando...');

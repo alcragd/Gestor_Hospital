@@ -84,8 +84,10 @@ window.login = async function () {
         // Guardar datos en localStorage
         localStorage.setItem("userId", data.userId);       // ID específico (Paciente, Doctor, etc.)
         localStorage.setItem("idUser", data.id);          // Id_User de la tabla Usuarios
+        localStorage.setItem("userRole", data.tipo);      // ⭐ GUARDADO COMO userRole para Vue
         localStorage.setItem("tipo", data.tipo);          // ID_Tipo_User (1,2,3,4)
         localStorage.setItem("nombre", data.nombre);
+        localStorage.setItem("username", data.nombre);    // ⭐ AGREGADO username para el panel
         localStorage.setItem("paterno", data.paterno || "");
         localStorage.setItem("materno", data.materno || "");
         localStorage.setItem("correo", data.correo);

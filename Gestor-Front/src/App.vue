@@ -1,12 +1,66 @@
-<script setup>
+<script>
 import FormularioCita from './components/FormularioCita.vue'
+import PanelRecepcionista from './components/recepcion/PanelRecepcionista.vue'
+
+export default {
+  name: 'App',
+  components: {
+    FormularioCita,
+    PanelRecepcionista
+  },
+  data() {
+    const role = localStorage.getItem('userRole');
+    let roleNum = null;
+    if (role) {
+      const n = parseInt(role, 10);
+      if (!isNaN(n)) {
+        roleNum = n;
+      }
+    }
+    return {
+      userRole: roleNum
+    }
+  },
+  mounted() {
+    // Obtener el rol del usuario desde localStorage
+    this.cargarRol();
+    
+    // Listener para cambios en storage (login desde otra pestaña)
+    window.addEventListener('storage', this.cargarRol);
+  },
+  beforeUnmount() {
+    window.removeEventListener('storage', this.cargarRol);
+  },
+  methods: {
+    cargarRol() {
+      const role = localStorage.getItem('userRole');
+      // Convertir a número, manejo seguro
+      let roleNum = null;
+      if (role) {
+        roleNum = parseInt(role, 10);
+        if (isNaN(roleNum)) {
+          roleNum = null;
+        }
+      }
+      this.userRole = roleNum;
+      console.log('🔍 App.vue - cargarRol():');
+      console.log('  role desde localStorage:', role, '(tipo:', typeof role + ')');
+      console.log('  roleNum después de parseInt:', this.userRole, '(tipo:', typeof this.userRole + ')');
+      console.log('  ¿Es recepcionista (3)?', this.userRole === 3);
+    }
+  }
+}
 </script>
 
 <template>
-  <div id="app" class="bg-light min-vh-100 py-5">
+  <div id="app">
+    <!-- Mostrar panel de recepcionista si el rol es 3 -->
+    <PanelRecepcionista v-if="userRole === 3" />
     
-    <FormularioCita />
-
+    <!-- Mostrar formulario de cita por defecto -->
+    <div v-else class="bg-light min-vh-100 py-5">
+      <FormularioCita />
+    </div>
   </div>
 </template>
 

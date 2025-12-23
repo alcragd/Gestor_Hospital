@@ -14,11 +14,15 @@ const citasRoutes = require('./src/routes/citas.routes');
 const authRoutes  = require('./src/routes/authLogin');  // ← ESTA ES LA RUTA CORRECTA
 const pagosRoutes = require('./src/routes/pagos.routes');
 const cancelacionesRoutes = require('./src/routes/cancelaciones.routes');
+const pacientesRoutes = require('./src/routes/pacientes.routes');
+const doctoresRoutes = require('./src/routes/doctores.routes');
 
 app.use('/api/citas', citasRoutes);
 app.use('/auth', authRoutes);
 app.use('/api/pagos', pagosRoutes);
 app.use('/api/cancelaciones', cancelacionesRoutes);
+app.use('/api/pacientes', pacientesRoutes);
+app.use('/api/doctores', doctoresRoutes);
 
 app.get('/', (req, res) => {
   res.send('API del Gestor Hospital funcionando...');

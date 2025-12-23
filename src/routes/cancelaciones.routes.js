@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const cancelacionController = require('../controllers/cancelacion.controller');
 
+// POST /api/cancelaciones/mis-citas/:id_cita - Paciente cancela su cita (seguro)
+router.post('/mis-citas/:id_cita', cancelacionController.cancelarCitaPaciente);
+
 // POST /api/cancelaciones/cancelar - Cancelar una cita
 router.post('/cancelar', cancelacionController.cancelarCita);
 

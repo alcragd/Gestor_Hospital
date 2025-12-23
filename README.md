@@ -6,7 +6,7 @@ Sistema integral de gestión hospitalaria desarrollado con Node.js, Express y Vu
 
 **Backend:**
 - Node.js + Express
-- MySQL (base de datos)
+- SQL Server (base de datos)
 - JWT para autenticación
 
 **Frontend:**
@@ -39,7 +39,8 @@ Sistema integral de gestión hospitalaria desarrollado con Node.js, Express y Vu
 ### Prerrequisitos
 
 - Node.js v14 o superior
-- MySQL 8.0
+- SQL Server 2019 o superior
+- SQL Server Management Studio (SSMS)
 - npm o yarn
 
 ### 1. Clonar el repositorio
@@ -51,11 +52,15 @@ cd GestorHospital
 
 ### 2. Configurar Base de Datos
 
-Ejecutar el script SQL para crear la base de datos:
+**Restaurar desde backup (.bak)**
 
-```bash
-mysql -u root -p < sql/schema.sql
-```
+1. Abrir SQL Server Management Studio (SSMS)
+2. Conectarse a tu instancia de SQL Server
+3. Click derecho en **Databases** → **Restore Database**
+4. Seleccionar **Device** → Click en **[...]**
+5. Click en **Add** → Buscar el archivo `GestorHospitalDB.bak` en la carpeta `sql/`
+6. Click en **OK** → **OK** para restaurar
+7. La base de datos `GestorHospitalDB` estará lista con todos los datos de prueba
 
 ### 3. Configurar Backend
 
@@ -79,7 +84,7 @@ npm install
 ### Terminal 1 - Backend (Puerto 3000)
 
 ```bash
-node server.js
+npm run dev
 ```
 
 Debería ver: `Server running on port 3000`
@@ -164,7 +169,7 @@ GestorHospital/
 ├── package.json                        # Dependencias backend
 ├── src/
 │   ├── config/
-│   │   └── db.config.js               # Configuración MySQL
+│   │   └── db.config.js               # Configuración SQL Server
 │   ├── controllers/
 │   │   ├── AuthController.js          # Autenticación
 │   │   ├── cita.controller.js         # Lógica de citas
@@ -203,7 +208,7 @@ GestorHospital/
 │           ├── CitaService.js         # Cliente API citas
 │           └── RecepcionService.js    # Cliente API recepción
 └── sql/
-    └── schema.sql                     # Script base de datos
+    └── GestorHospitalDB.bak           # Backup completo de base de datos
 ```
 
 ## 🔒 Seguridad
@@ -217,15 +222,28 @@ GestorHospital/
 
 ### Backend no inicia
 
-- Verificar que MySQL esté corriendo
+- Verificar que SQL Server esté corriendo
 - Revisar credenciales en `src/config/db.config.js`
+- Verificar que la instancia SQL Server sea accesible
 - Comprobar que el puerto 3000 esté disponible
+
+### Error de conexión a base de datos
+
+- Verificar que la base de datos `GestorHospitalDB` exista
+- Comprobar credenciales de SQL Server en `db.config.js`
+- Verificar que SQL Server permita conexiones remotas
+- Revisar que el usuario tenga permisos sobre la base de datos
 
 ### Frontend muestra página en blanco
 
 - Verificar que el backend esté corriendo en puerto 3000
 - Limpiar cache del navegador (Ctrl + Shift + R)
 - Revisar consola del navegador (F12) para errores
+
+### Error de CORS
+
+- Asegurar que el backend incluya headers CORS correctos
+- Verificar que las URLs de API coincidan (localhost:3000)
 
 ### Error de CORS
 

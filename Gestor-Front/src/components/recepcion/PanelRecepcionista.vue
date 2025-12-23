@@ -1,34 +1,61 @@
 <template>
-  <div class="panel-recepcionista">
-    <header class="header">
-      <h1>🏥 Panel de Recepcionista</h1>
-      <div class="user-info">
-        <span>{{ usuarioNombre }}</span>
-        <button @click="logout" class="btn-logout">Cerrar Sesión</button>
-      </div>
-    </header>
-
-    <nav class="navbar">
-      <button 
-        v-for="item in menuItems"
-        :key="item.id"
-        :class="{ active: currentView === item.id }"
-        @click="currentView = item.id"
-        class="nav-item">
-        {{ item.icon }} {{ item.label }}
-      </button>
-    </nav>
-
-    <div class="content">
-      <GestionPacientes v-if="currentView === 'pacientes'" />
-      <GestionDoctores v-if="currentView === 'doctores'" />
-      <VentaServicios v-if="currentView === 'servicios'" />
-      <Farmacia v-if="currentView === 'farmacia'" />
+  <!-- SIDEBAR DESLIZABLE -->
+  <div class="sidebar" :class="{ open: sidebarOpen }">
+    <div class="sidebar-header">
+      <h4 class="text-center mb-3">Mi Perfil</h4>
     </div>
 
-    <footer class="footer">
-      <p>&copy; 2025 Gestor Hospital - Sistema de Recepción</p>
-    </footer>
+    <hr>
+
+    <div class="sidebar-section">
+      <h6>Información</h6>
+      <p><strong>Usuario:</strong> {{ usuarioNombre }}</p>
+      <p><strong>Rol:</strong> Recepcionista</p>
+      <p><strong>ID:</strong> {{ userId }}</p>
+    </div>
+
+    <hr>
+
+    <div class="sidebar-section">
+      <h6>Accesos Rápidos</h6>
+      <div class="d-grid gap-2">
+        <button 
+          v-for="item in menuItems"
+          :key="item.id"
+          :class="['btn', currentView === item.id ? 'btn-primary' : 'btn-outline-primary']"
+          @click="currentView = item.id; sidebarOpen = false">
+          {{ item.label }}
+        </button>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="sidebar-section">
+      <button class="btn btn-danger w-100" @click="logout">
+        Cerrar Sesión
+      </button>
+    </div>
+  </div>
+
+  <!-- BOTÓN PARA ABRIR SIDEBAR -->
+  <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen">
+    ☰
+  </button>
+
+  <div class="form-wrapper">
+    <div class="card shadow-sm panel-card">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Panel de Recepcionista - {{ usuarioNombre }}</h5>
+      </div>
+
+      <div class="card-body">
+        <GestionPacientes v-if="currentView === 'pacientes'" />
+        <GestionDoctores v-if="currentView === 'doctores'" />
+        <VentaServicios v-if="currentView === 'servicios'" />
+        <Farmacia v-if="currentView === 'farmacia'" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -50,11 +77,13 @@ export default {
     return {
       currentView: 'pacientes',
       usuarioNombre: 'Recepcionista',
+      userId: localStorage.getItem('userId') || 'N/A',
+      sidebarOpen: false,
       menuItems: [
-        { id: 'pacientes', label: 'Pacientes', icon: '👤' },
-        { id: 'doctores', label: 'Doctores', icon: '👨‍⚕️' },
-        { id: 'servicios', label: 'Servicios', icon: '🏥' },
-        { id: 'farmacia', label: 'Farmacia', icon: '💊' }
+        { id: 'pacientes', label: 'Pacientes' },
+        { id: 'doctores', label: 'Doctores' },
+        { id: 'servicios', label: 'Servicios' },
+        { id: 'farmacia', label: 'Farmacia' }
       ]
     };
   },
@@ -89,141 +118,109 @@ export default {
 </script>
 
 <style scoped>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.panel-recepcionista {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: #f5f5f5;
-}
-
-.header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 20px 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.header h1 {
-  font-size: 28px;
-  font-weight: 600;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.user-info span {
-  font-size: 14px;
-}
-
-.btn-logout {
-  padding: 8px 16px;
-  background: rgba(255,255,255,0.2);
-  color: white;
-  border: 1px solid white;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.3s;
-}
-
-.btn-logout:hover {
-  background: rgba(255,255,255,0.3);
-}
-
-.navbar {
-  background: white;
-  padding: 0;
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid #e0e0e0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.nav-item {
-  flex: 1;
-  padding: 16px 20px;
-  background: white;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: #666;
-  transition: all 0.3s;
-  border-bottom: 3px solid transparent;
-}
-
-.nav-item:hover {
-  background: #f9f9f9;
-  color: #333;
-}
-
-.nav-item.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
-  background: #f0f4ff;
-}
-
-.content {
-  flex: 1;
+/* SIDEBAR DESLIZABLE */
+.sidebar {
+  position: fixed;
+  left: -300px;
+  top: 0;
+  width: 280px;
+  height: 100%;
+  background: #ffffff;
+  border-right: 1px solid #ddd;
+  box-shadow: 2px 0px 10px rgba(0,0,0,0.1);
   padding: 20px;
+  transition: 0.30s ease;
+  z-index: 2000;
   overflow-y: auto;
 }
 
-.footer {
-  background: white;
-  color: #999;
-  text-align: center;
-  padding: 20px;
-  border-top: 1px solid #e0e0e0;
-  font-size: 12px;
+.sidebar.open {
+  left: 0;
 }
 
+.sidebar-toggle {
+  position: fixed;
+  left: 10px;
+  top: 10px;
+  z-index: 2100;
+  background: #0d6efd;
+  color: #fff;
+  border: none;
+  font-size: 20px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: all 0.3s;
+}
+
+.sidebar-toggle:hover {
+  background: #0b5ed7;
+  transform: scale(1.05);
+}
+
+.sidebar-header h4 {
+  color: #0d6efd;
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.sidebar-section {
+  margin-bottom: 20px;
+}
+
+.sidebar-section h6 {
+  margin-bottom: 12px;
+  font-weight: bold;
+  color: #0d6efd;
+  font-size: 0.95rem;
+}
+
+.sidebar-section p {
+  margin: 8px 0;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.sidebar-section .btn {
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+/* WRAPPER CENTRADO COMO FORMULARIO CITA */
+.form-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 1.25rem;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+/* PANEL CARD */
+.panel-card {
+  width: 100%;
+  max-width: 1400px;
+  min-width: 1100px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  align-self: flex-start;
+}
+
+.panel-card .card-body {
+  padding: 2rem;
+}
+
+/* RESPONSIVE */
 @media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    gap: 15px;
+  .panel-card {
+    margin: 0.5rem;
+    padding: 0.1rem;
+    min-width: auto;
   }
-
-  .header h1 {
-    font-size: 22px;
+  
+  .panel-card .card-body {
+    padding: 1rem;
   }
-
-  .navbar {
-    flex-wrap: wrap;
-  }
-
-  .nav-item {
-    flex: 0 1 calc(50% - 5px);
-  }
-}
-
-.loading-indicator {
-  text-align: center;
-  padding: 40px;
-  color: #666;
-  font-size: 18px;
-}
-
-.error-message {
-  text-align: center;
-  padding: 40px;
-  color: #721c24;
-  background: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
-  font-size: 16px;
 }
 </style>

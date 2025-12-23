@@ -126,14 +126,16 @@ BEGIN
     -- ════════════════════════════════════════════════════════════
     DECLARE @Dia_Semana VARCHAR(20);
     
+    -- Note: DATEFIRST is set to 1 (Monday), so:
+    -- 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
     SET @Dia_Semana = CASE DATEPART(WEEKDAY, @Fecha_Cita)
-        WHEN 1 THEN 'Domingo'
-        WHEN 2 THEN 'Lunes'
-        WHEN 3 THEN 'Martes'
-        WHEN 4 THEN 'Miércoles'
-        WHEN 5 THEN 'Jueves'
-        WHEN 6 THEN 'Viernes'
-        WHEN 7 THEN 'Sábado'
+        WHEN 1 THEN 'Lunes'
+        WHEN 2 THEN 'Martes'
+        WHEN 3 THEN 'Miércoles'
+        WHEN 4 THEN 'Jueves'
+        WHEN 5 THEN 'Viernes'
+        WHEN 6 THEN 'Sábado'
+        WHEN 7 THEN 'Domingo'
     END;
     
     IF NOT EXISTS (

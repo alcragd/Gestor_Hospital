@@ -36,7 +36,8 @@ class CitaService {
             
             throw new Error('Error al crear la cita: ' + error.message);
         } finally {
-            if (pool) pool.close();
+            // No cerrar el pool - es global y se reutiliza
+            // if (pool) pool.close();
         }
     }
 

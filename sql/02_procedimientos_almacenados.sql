@@ -188,25 +188,34 @@ BEGIN
             WHERE Id_Cita = @Id_Cita
             ORDER BY Id_Pago DESC;
             
-            -- Calcular horas de anticipación
-            SET @Horas_Anticipacion = DATEDIFF(HOUR, GETDATE(), @Fecha_Cita);
-            
-            -- Determinar porcentaje de reembolso
-            SET @Porcentaje_Reembolso = CASE
-                WHEN @Horas_Anticipacion >= 48 THEN 1.00  -- 100%
-                WHEN @Horas_Anticipacion >= 24 THEN 0.50  -- 50%
-                ELSE 0.00                                  -- 0%
-            END;
-            
-            SET @Monto_Reembolso = @Monto_Pago * @Porcentaje_Reembolso;
-            
-            -- Registrar el reembolso (se guardará en bitácora)
-            INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
-            VALUES (@Id_Pago, GETDATE(), @Usuario, 
-                    'Reembolso: $' + CAST(@Monto_Reembolso AS VARCHAR(10)) + 
-                    ' (' + CAST(CAST(@Porcentaje_Reembolso * 100 AS INT) AS VARCHAR(3)) + '%) - ' +
-                    'Motivo: ' + @Motivo, 
-                    'REEMBOLSO', 'Pago');
+            -- Si existe un pago, calcular reembolso
+            IF @Id_Pago IS NOT NULL
+            BEGIN
+                -- Calcular horas de anticipación
+                SET @Horas_Anticipacion = DATEDIFF(HOUR, GETDATE(), @Fecha_Cita);
+                
+                -- Determinar porcentaje de reembolso
+                SET @Porcentaje_Reembolso = CASE
+                    WHEN @Horas_Anticipacion >= 48 THEN 1.00  -- 100%
+                    WHEN @Horas_Anticipacion >= 24 THEN 0.50  -- 50%
+                    ELSE 0.00                                  -- 0%
+                END;
+                
+                SET @Monto_Reembolso = @Monto_Pago * @Porcentaje_Reembolso;
+                
+                -- Registrar el reembolso (se guardará en bitácora)
+                INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                VALUES (@Id_Pago, GETDATE(), @Usuario, 
+                        'Reembolso: $' + CAST(@Monto_Reembolso AS VARCHAR(10)) + 
+                        ' (' + CAST(CAST(@Porcentaje_Reembolso * 100 AS INT) AS VARCHAR(3)) + '%) - ' +
+                        'Motivo: ' + @Motivo, 
+                        'REEMBOLSO', 'Pago');
+            END
+            ELSE
+            BEGIN
+                SET @Monto_Reembolso = 0;
+                SET @Porcentaje_Reembolso = 0;
+            END
         END
         ELSE
         BEGIN

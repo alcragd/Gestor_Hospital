@@ -144,8 +144,8 @@ router.put('/me', async (req, res) => {
       .input('registro', db.sql.Int, empleadoId)
       .input('detalle', db.sql.VarChar(200), `Campos actualizados: ${setClauses.join(', ')}`)
       .query(`
-        INSERT INTO Bitacora (Usuario, Accion, Tabla_Afectada, Registro_Afectado, Detalle)
-        VALUES (@usuario, @accion, @tabla, @registro, @detalle)
+        INSERT INTO Bitacora (Fecha_Hora, Usuario, Accion, Tabla_Afectada, Id_Reg_Afectado, Detalles)
+        VALUES (GETDATE(), @usuario, @accion, @tabla, @registro, @detalle)
       `);
 
     res.json({
@@ -220,12 +220,11 @@ router.get('/paciente/:id_paciente', async (req, res) => {
           Nombre,
           Paterno,
           Materno,
-          Fecha_Nac,
-          CURP,
-          NSS,
+          Fecha_nac AS Fecha_Nac,
           Sexo,
-          Telefono,
-          Email
+          Telefono_cel AS Telefono,
+          Correo AS Email,
+          DNI
         FROM Pacientes
         WHERE ID_Paciente = @pacienteId
       `);
@@ -309,14 +308,12 @@ router.get('/paciente/:id_paciente/historial', async (req, res) => {
           E.Nombre AS Especialidad,
           CONCAT(EM.Nombre, ' ', EM.Paterno, ' ', EM.Materno) AS Doctor,
           ES.Nombre AS Estatus,
-          ES.Id_Estatus,
-          CONS.Nombre AS Consultorio
+          ES.Id_Estatus
         FROM Citas C
         INNER JOIN Doctores D ON C.Id_Doc = D.Id_Doctor
         INNER JOIN Empleados EM ON D.Id_Empleado = EM.Id_Empleado
         INNER JOIN Especialidades E ON D.Id_Especialidad = E.Id_Especialidad
         INNER JOIN Estatus_Cita ES ON C.ID_Estatus = ES.Id_Estatus
-        LEFT JOIN Consultorio CONS ON E.ID_Consultorio = CONS.Id_Consultorio
         WHERE C.ID_Paciente = @pacienteId
         ORDER BY C.Fecha_cita DESC, C.Hora_Inicio DESC
       `);
@@ -415,12 +412,12 @@ router.post('/receta', async (req, res) => {
       .input('usuario', db.sql.NVarChar(50), `Doctor_${userId}`)
       .query(`
         INSERT INTO Recetas (
-          Id_Cita, Id_Doctor, ID_Paciente, Diagnostico, Indicaciones, 
+          Id_Cita, Id_Doctor, ID_Paciente, Fecha, Vigencia, Fecha_Emision, Diagnostico, Indicaciones, 
           Medicamentos, Observaciones, Vigencia_Dias, Usuario_Registro
         )
         OUTPUT INSERTED.Id_Receta, INSERTED.Fecha_Emision, INSERTED.Fecha_Vencimiento
         VALUES (
-          @idCita, @idDoctor, @idPaciente, @diagnostico, @indicaciones,
+          @idCita, @idDoctor, @idPaciente, GETDATE(), @vigenciaDias, GETDATE(), @diagnostico, @indicaciones,
           @medicamentos, @observaciones, @vigenciaDias, @usuario
         )
       `);

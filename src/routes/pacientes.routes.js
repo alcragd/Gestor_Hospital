@@ -140,6 +140,18 @@ router.put('/me', async (req, res) => {
         return res.status(403).json({ message: 'Acceso restringido al perfil de paciente' });
     }
 
+    // Validar que no se envíen campos prohibidos
+    const prohibidosCampos = ['Nombre', 'Paterno', 'Materno', 'Fecha_nac', 'DNI', 'Sexo', 'Edad', 'Id_User', 'CURP', 'NSS', 'ID_Paciente'];
+    const camposEnviados = Object.keys(req.body);
+    const camposProhibidosEnviados = camposEnviados.filter(campo => prohibidosCampos.includes(campo));
+    
+    if (camposProhibidosEnviados.length > 0) {
+        return res.status(403).json({ 
+            message: 'Campo prohibido',
+            details: `No puede modificar los siguientes campos: ${camposProhibidosEnviados.join(', ')}`
+        });
+    }
+
     if (!Telefono && !Email && !Telefono_emergencia) {
         return res.status(400).json({ message: 'Debe proporcionar al menos un campo para actualizar (Telefono, Email, Telefono_emergencia)' });
     }

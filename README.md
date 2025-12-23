@@ -16,6 +16,8 @@ Sistema integral de gestión hospitalaria desarrollado con Node.js, Express y Vu
 
 ## 📋 Características
 
+ > Plan de trabajo y avance: ver [TODO.md](TODO.md)
+
 ### Módulos Implementados
 
 - **🔐 Autenticación** - Login multi-rol (Paciente, Doctor, Farmacéutico, Recepcionista)

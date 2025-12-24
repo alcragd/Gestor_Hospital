@@ -971,7 +971,73 @@ class RecepcionService {
 
     // ==================== CANCELAR CITAS ====================
 
-    async cancelarCitaRecepcionista(idCita, motivo, usuarioRegistro) {
+    // ==================== CANCELACIÓN DE CITAS ====================
+
+    async listarCitas(filtros = {}) {
+        try {
+            const pool = await db.connect();
+            const request = pool.request();
+            
+            let query = `
+                SELECT 
+                    c.Id_Cita,
+                    c.ID_Paciente,
+                    c.Id_Doc,
+                    c.Fecha_cita,
+                    c.Hora_Inicio,
+                    c.Hora_Fin,
+                    c.ID_Estatus,
+                    e.Nombre AS Estatus,
+                    CONCAT(emp.Nombre, ' ', emp.Paterno, ' ', ISNULL(emp.Materno, '')) AS Nombre_Doctor,
+                    d.Id_Doctor,
+                    CONCAT(p.Nombre, ' ', p.Paterno, ' ', ISNULL(p.Materno, '')) AS Nombre_Paciente
+                FROM Citas c
+                INNER JOIN Estatus_Cita e ON c.ID_Estatus = e.ID_Estatus
+                LEFT JOIN Doctores d ON c.Id_Doc = d.Id_Doctor
+                LEFT JOIN Empleados emp ON d.Id_Empleado = emp.Id_Empleado
+                LEFT JOIN Pacientes p ON c.ID_Paciente = p.ID_Paciente
+                WHERE 1=1
+            `;
+            
+            if (filtros.estatus) {
+                query += ` AND c.ID_Estatus = @estatus`;
+                request.input('estatus', db.sql.Int, parseInt(filtros.estatus));
+            }
+            
+            if (filtros.doctor) {
+                query += ` AND (emp.Nombre LIKE @doctor OR emp.Paterno LIKE @doctor OR d.Id_Doctor = @doctorId)`;
+                request.input('doctor', db.sql.VarChar, `%${filtros.doctor}%`);
+                request.input('doctorId', db.sql.Int, isNaN(filtros.doctor) ? 0 : parseInt(filtros.doctor));
+            }
+            
+            if (filtros.paciente) {
+                query += ` AND (p.Nombre LIKE @paciente OR p.Paterno LIKE @paciente OR c.ID_Paciente = @pacienteId)`;
+                request.input('paciente', db.sql.VarChar, `%${filtros.paciente}%`);
+                request.input('pacienteId', db.sql.Int, isNaN(filtros.paciente) ? 0 : parseInt(filtros.paciente));
+            }
+            
+            if (filtros.fechaInicio) {
+                query += ` AND c.Fecha_cita >= @fechaInicio`;
+                request.input('fechaInicio', db.sql.Date, filtros.fechaInicio);
+            }
+            
+            if (filtros.fechaFin) {
+                query += ` AND c.Fecha_cita <= @fechaFin`;
+                request.input('fechaFin', db.sql.Date, filtros.fechaFin);
+            }
+            
+            query += ` ORDER BY c.Fecha_cita DESC, c.Hora_Inicio DESC`;
+            
+            const result = await request.query(query);
+            return result.recordset;
+            
+        } catch (error) {
+            console.error('❌ Error al listar citas:', error);
+            throw new Error('Error al obtener lista de citas');
+        }
+    }
+
+    async cancelarCitaRecepcionista(idCita, motivo, usuarioRegistro, canceladoPor = 'Paciente') {
         let pool;
         try {
             pool = await db.connect();
@@ -980,9 +1046,19 @@ class RecepcionService {
             const result = await pool.request()
                 .input('Id_Cita', db.sql.Int, idCita)
                 .input('Motivo', db.sql.VarChar, motivo)
-                .input('Cancelado_Por', db.sql.VarChar, 'Recepcionista')
+                .input('Cancelado_Por', db.sql.VarChar, canceladoPor)
                 .input('Usuario', db.sql.VarChar, usuarioRegistro)
                 .execute('SP_CancelarCita');
+            
+            // El SP devuelve Mensaje, Monto_Reembolso, Porcentaje_Reembolso
+            const spPayload = (result && result.recordset && result.recordset[0]) || {
+                Mensaje: 'Cancelación aplicada (stub SP_CancelarCita)',
+                Monto_Reembolso: 0,
+                Porcentaje_Reembolso: 0
+            };
+            spPayload.Id_Cita = idCita;
+            spPayload.Estatus = 'Cancelada';
+            spPayload.EstatusId = canceladoPor === 'Doctor' ? 5 : 4;
             
             // Registrar en bitácora
             await pool.request()
@@ -994,7 +1070,7 @@ class RecepcionService {
                     VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Citas')
                 `);
             
-            return result.recordset[0];
+            return spPayload;
             
         } catch (error) {
             console.error('❌ Error al cancelar cita:', error);

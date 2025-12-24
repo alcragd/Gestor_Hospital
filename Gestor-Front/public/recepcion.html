@@ -54,6 +54,12 @@
         console.log('  userRole:', userRole);
         console.log('  userId:', userId);
         console.log('  username:', username);
+
+        // Redirigir si no es recepcionista
+        if (!userRole || parseInt(userRole, 10) !== 3) {
+            console.warn('Usuario sin rol de recepcionista. Redirigiendo a login.');
+            window.location.href = '/login.html';
+        }
         
         // Global error handler
         window.addEventListener('error', function(event) {

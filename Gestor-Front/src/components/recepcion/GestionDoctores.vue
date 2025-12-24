@@ -100,6 +100,61 @@
           </div>
         </div>
       </div>
+
+      <!-- Modal de edición -->
+      <div v-if="doctorEditando" class="modal">
+        <div class="modal-content modal-large">
+          <span class="close" @click="cerrarEdicion">&times;</span>
+          <h3>Editar Doctor</h3>
+          <form @submit.prevent="guardarEdicion">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Correo</label>
+                <input v-model="formEditar.Correo" type="email">
+              </div>
+              <div class="form-group">
+                <label>Teléfono Celular</label>
+                <input v-model="formEditar.Telefono_cel" type="text">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Teléfono Emergencia</label>
+                <input v-model="formEditar.Telefono_emergencia" type="text">
+              </div>
+              <div class="form-group">
+                <label>Sueldo</label>
+                <input v-model="formEditar.Sueldo" type="number" step="0.01">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Especialidad</label>
+                <select v-model="formEditar.Id_Especialidad">
+                  <option value="">Seleccionar...</option>
+                  <option value="1">Cardiología</option>
+                  <option value="2">Pediatría</option>
+                  <option value="3">Dermatología</option>
+                  <option value="4">Neurología</option>
+                  <option value="5">Oftalmología</option>
+                </select>
+              </div>
+            </div>
+
+            <div v-if="mensajeErrorEdit" class="error">{{ mensajeErrorEdit }}</div>
+            <div v-if="mensajeExitoEdit" class="success">{{ mensajeExitoEdit }}</div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary" @click="cerrarEdicion">Cancelar</button>
+              <button type="submit" class="btn-primary" :disabled="guardando">
+                {{ guardando ? 'Guardando...' : 'Guardar Cambios' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- CREAR DOCTOR -->
@@ -224,12 +279,16 @@ export default {
       tab: 'listar',
       doctores: [],
       doctorSeleccionado: null,
+      doctorEditando: null,
       busqueda: '',
       filtroEspecialidad: '',
       loading: false,
       cargando: false,
+      guardando: false,
       mensajeError: '',
       mensajeExito: '',
+      mensajeErrorEdit: '',
+      mensajeExitoEdit: '',
       formNuevo: {
         Nombre: '',
         Paterno: '',
@@ -248,6 +307,13 @@ export default {
         crearUsuario: false,
         Username: '',
         Password: ''
+      },
+      formEditar: {
+        Correo: '',
+        Telefono_cel: '',
+        Telefono_emergencia: '',
+        Sueldo: '',
+        Id_Especialidad: ''
       }
     };
   },
@@ -281,7 +347,55 @@ export default {
       this.doctorSeleccionado = doctor;
     },
     editarDoctor(doctor) {
-      alert('Función de edición en desarrollo');
+      this.doctorEditando = doctor;
+      this.formEditar = {
+        Correo: doctor.Correo || '',
+        Telefono_cel: doctor.Telefono_cel || '',
+        Telefono_emergencia: doctor.Telefono_emergencia || '',
+        Sueldo: doctor.Sueldo || '',
+        Id_Especialidad: doctor.Id_Especialidad || ''
+      };
+      this.mensajeErrorEdit = '';
+      this.mensajeExitoEdit = '';
+    },
+    cerrarEdicion() {
+      this.doctorEditando = null;
+      this.mensajeErrorEdit = '';
+      this.mensajeExitoEdit = '';
+    },
+    async guardarEdicion() {
+      this.guardando = true;
+      this.mensajeErrorEdit = '';
+      this.mensajeExitoEdit = '';
+      
+      try {
+        const dataActualizar = {};
+        
+        if (this.formEditar.Correo) dataActualizar.Correo = this.formEditar.Correo;
+        if (this.formEditar.Telefono_cel) dataActualizar.Telefono_cel = this.formEditar.Telefono_cel;
+        if (this.formEditar.Telefono_emergencia) dataActualizar.Telefono_emergencia = this.formEditar.Telefono_emergencia;
+        if (this.formEditar.Sueldo) dataActualizar.Sueldo = parseFloat(this.formEditar.Sueldo);
+        if (this.formEditar.Id_Especialidad) dataActualizar.Id_Especialidad = parseInt(this.formEditar.Id_Especialidad);
+
+        if (Object.keys(dataActualizar).length === 0) {
+          this.mensajeErrorEdit = 'No hay cambios para guardar';
+          this.guardando = false;
+          return;
+        }
+
+        await RecepcionService.actualizarDoctor(this.doctorEditando.Id_Doctor, dataActualizar);
+        this.mensajeExitoEdit = 'Doctor actualizado exitosamente';
+        
+        setTimeout(async () => {
+          this.cerrarEdicion();
+          await this.cargarDoctores();
+        }, 1500);
+        
+      } catch (error) {
+        this.mensajeErrorEdit = error.message;
+      } finally {
+        this.guardando = false;
+      }
     },
     async crearNuevoDoctor() {
       this.cargando = true;
@@ -583,6 +697,10 @@ button[type="submit"]:disabled {
   position: relative;
 }
 
+.modal-content.modal-large {
+  max-width: 800px;
+}
+
 .close {
   position: absolute;
   top: 15px;
@@ -605,5 +723,45 @@ button[type="submit"]:disabled {
 .modal-content .form-group p {
   margin: 5px 0;
   color: #666;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.btn-primary {
+  background: #007bff;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-primary:hover {
+  background: #0056b3;
+}
+
+.btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
 }
 </style>

@@ -88,9 +88,10 @@ router.post('/medicamentos/venta', recepcionController.venderMedicamento);
 router.put('/medicamentos/:id/stock', recepcionController.actualizarStock);
 
 // ═══════════════════════════════════════════════════════════════
-// RUTAS - CANCELACIÓN DE CITAS
+// RUTAS - GESTIÓN DE CITAS
 // ═══════════════════════════════════════════════════════════════
 
+router.get('/citas', recepcionController.listarCitas);
 router.post('/citas/:id/cancelar', recepcionController.cancelarCita);
 
 module.exports = router;

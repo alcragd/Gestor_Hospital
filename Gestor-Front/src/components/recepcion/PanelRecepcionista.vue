@@ -52,8 +52,9 @@
       <div class="card-body">
         <GestionPacientes v-if="currentView === 'pacientes'" />
         <GestionDoctores v-if="currentView === 'doctores'" />
-        <VentaServicios v-if="currentView === 'servicios'" />
-        <Farmacia v-if="currentView === 'farmacia'" />
+        <GestionCitas v-if="currentView === 'citas'" />
+        <VentasUnificadas v-if="currentView === 'ventas'" />
+        <GestionRecepcionistas v-if="currentView === 'recepcionistas'" />
       </div>
     </div>
   </div>
@@ -62,16 +63,18 @@
 <script>
 import GestionPacientes from './GestionPacientes.vue';
 import GestionDoctores from './GestionDoctores.vue';
-import VentaServicios from './VentaServicios.vue';
-import Farmacia from './Farmacia.vue';
+import GestionCitas from './GestionCitas.vue';
+import VentasUnificadas from './VentasUnificadas.vue';
+import GestionRecepcionistas from './GestionRecepcionistas.vue';
 
 export default {
   name: 'PanelRecepcionista',
   components: {
     GestionPacientes,
     GestionDoctores,
-    VentaServicios,
-    Farmacia
+    GestionCitas,
+    VentasUnificadas,
+    GestionRecepcionistas
   },
   data() {
     return {
@@ -82,8 +85,9 @@ export default {
       menuItems: [
         { id: 'pacientes', label: 'Pacientes' },
         { id: 'doctores', label: 'Doctores' },
-        { id: 'servicios', label: 'Servicios' },
-        { id: 'farmacia', label: 'Farmacia' }
+        { id: 'citas', label: 'Citas' },
+        { id: 'ventas', label: 'Ventas' },
+        { id: 'recepcionistas', label: 'Recepcionistas' }
       ]
     };
   },

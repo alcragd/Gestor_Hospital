@@ -535,11 +535,46 @@ exports.actualizarStock = async (req, res) => {
 // CANCELACIONES
 // ═══════════════════════════════════════════════════════════════
 
+const db = require('../config/db.config');
+
+// ═══════════════════════════════════════════════════════════════
+// GESTIÓN DE CITAS
+// ═══════════════════════════════════════════════════════════════
+
+exports.listarCitas = async (req, res) => {
+    try {
+        const { estatus, doctor, paciente, fechaInicio, fechaFin } = req.query;
+        
+        const filtros = {};
+        if (estatus) filtros.estatus = estatus;
+        if (doctor) filtros.doctor = doctor;
+        if (paciente) filtros.paciente = paciente;
+        if (fechaInicio) filtros.fechaInicio = fechaInicio;
+        if (fechaFin) filtros.fechaFin = fechaFin;
+        
+        const citas = await recepcionService.listarCitas(filtros);
+        
+        res.json({
+            success: true,
+            total: citas.length,
+            citas
+        });
+    } catch (error) {
+        console.error('❌ Error GET /api/recepcion/citas:', error);
+        res.status(500).json({
+            message: 'Error al obtener lista de citas',
+            details: error.message
+        });
+    }
+};
+
 exports.cancelarCita = async (req, res) => {
+    let estatusId;
+    let estatusNombre;
     try {
         const idCita = parseInt(req.params.id, 10);
         const userId = req.headers['x-user-id'];
-        const { Motivo } = req.body;
+        const { Motivo, Cancelado_Por } = req.body;
         
         if (isNaN(idCita)) {
             return res.status(400).json({ message: 'ID de cita inválido' });
@@ -548,23 +583,120 @@ exports.cancelarCita = async (req, res) => {
         if (!Motivo) {
             return res.status(400).json({ message: 'El motivo de cancelación es obligatorio' });
         }
+
+        // Normalizar quién solicita la cancelación (Paciente o Doctor); default Paciente
+        const canceladoPor = (Cancelado_Por || 'Paciente').trim();
+        if (!['Paciente', 'Doctor'].includes(canceladoPor)) {
+            return res.status(400).json({ message: 'Cancelado_Por debe ser "Paciente" o "Doctor"' });
+        }
+        
+        // Validación defensiva: no cancelar citas atendidas
+        const pool = await db.connect();
+        const citaRes = await pool.request()
+            .input('idCita', db.sql.Int, idCita)
+            .query(`
+                SELECT C.Id_Cita, C.ID_Estatus, ES.Nombre AS Estatus
+                FROM Citas C
+                INNER JOIN Estatus_Cita ES ON C.ID_Estatus = ES.Id_Estatus
+                WHERE C.Id_Cita = @idCita
+            `);
+        
+        if (citaRes.recordset.length === 0) {
+            return res.status(404).json({ message: 'Cita no encontrada' });
+        }
+        
+        estatusNombre = citaRes.recordset[0].Estatus;
+        estatusId = citaRes.recordset[0].ID_Estatus;
+        if (estatusNombre && estatusNombre.toLowerCase().includes('atendida')) {
+            return res.status(400).json({ message: 'No se pueden cancelar citas atendidas' });
+        }
+        // Solo permitimos transición desde estatus agendada/pagada (1 o 2); si no, devolvemos conflicto
+        if (![1, 2].includes(estatusId)) {
+            return res.status(409).json({
+                message: 'Transición de estatus no permitida',
+                estatusActual: { id: estatusId, nombre: estatusNombre }
+            });
+        }
+
+        // Regla adicional: si está en 1 (Agendada-Pendiente de Pago), el SP solo permite canceladoPor = 'Paciente'
+        if (estatusId === 1 && canceladoPor !== 'Paciente') {
+            return res.status(409).json({
+                message: 'Transición de estatus no permitida para este rol. Use Cancelado_Por="Paciente" cuando la cita está en Agendada-Pendiente de Pago.',
+                estatusActual: { id: estatusId, nombre: estatusNombre }
+            });
+        }
+
+        // Si es 1 y canceladoPor es Paciente y aún falla, devolvemos un mensaje más claro sin llamar al SP
+        if (estatusId === 1 && canceladoPor === 'Paciente') {
+            try {
+                const resultado = await recepcionService.cancelarCitaRecepcionista(
+                    idCita,
+                    Motivo,
+                    `Recepcionista_${userId}`,
+                    canceladoPor
+                );
+                const porcentaje = resultado.Porcentaje_Reembolso;
+                const politica = porcentaje === 100 ? 'Cancelación ≥48h: 100%' : porcentaje === 50 ? 'Cancelación 24-48h: 50%' : 'Cancelación <24h: 0%';
+                return res.json({
+                    success: true,
+                    message: 'Cita cancelada exitosamente',
+                    detalles: {
+                        idCita: resultado.Id_Cita || idCita,
+                        estatus: resultado.Estatus || 'Cancelada',
+                        estatusId: resultado.EstatusId || resultado.ID_Estatus || null,
+                        porcentajeReembolso: resultado.Porcentaje_Reembolso ?? null,
+                        montoReembolso: resultado.Monto_Reembolso ?? null,
+                        politica,
+                        mensaje: resultado.Mensaje || 'Cancelación aplicada'
+                    }
+                });
+            } catch (error) {
+                const detalle = error.originalError?.info?.message || error.message;
+                const isConflict = detalle && (detalle.toLowerCase().includes('transición') || detalle.toLowerCase().includes('estatus'));
+                return res.status(isConflict ? 409 : 500).json({
+                    message: detalle || 'Error al cancelar cita',
+                    details: error.message,
+                    estatusContexto: { id: estatusId, nombre: estatusNombre }
+                });
+            }
+        }
+
+        // Regla adicional: si está en 2 (Pagada-Pendiente por Atender), SP admite canceladoPor Paciente o Doctor; si falla, devolveremos el error del SP
         
         const resultado = await recepcionService.cancelarCitaRecepcionista(
             idCita,
             Motivo,
-            `Recepcionista_${userId}`
+            `Recepcionista_${userId}`,
+            canceladoPor
         );
         
+        const porcentaje = resultado.Porcentaje_Reembolso;
+        const politica = porcentaje === 100 ? 'Cancelación ≥48h: 100%' : porcentaje === 50 ? 'Cancelación 24-48h: 50%' : 'Cancelación <24h: 0%';
+
         res.json({
             success: true,
             message: 'Cita cancelada exitosamente',
-            resultado
+            detalles: {
+                idCita: resultado.Id_Cita || idCita,
+                estatus: resultado.Estatus || 'Cancelada',
+                estatusId: resultado.EstatusId || resultado.ID_Estatus || null,
+                porcentajeReembolso: resultado.Porcentaje_Reembolso ?? null,
+                montoReembolso: resultado.Monto_Reembolso ?? null,
+                politica,
+                mensaje: resultado.Mensaje || 'Cancelación aplicada'
+            }
         });
     } catch (error) {
         console.error('❌ Error POST /api/recepcion/citas/:id/cancelar:', error);
-        res.status(500).json({
-            message: 'Error al cancelar cita',
-            details: error.message
+        const detalle = error.originalError?.info?.message || error.message;
+        const isConflict = detalle && (detalle.toLowerCase().includes('transición') || detalle.toLowerCase().includes('estatus'));
+        return res.status(isConflict ? 409 : 500).json({
+            message: detalle || 'Error al cancelar cita',
+            details: error.message,
+            estatusContexto: {
+                id: estatusId || null,
+                nombre: estatusNombre || null
+            }
         });
     }
 };

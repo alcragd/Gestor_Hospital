@@ -9,6 +9,15 @@ function getUserContext(req) {
   return { userId, role };
 }
 
+// Bloqueo explícito para recepcionistas: no pueden acceder a recetas ni historiales
+router.use((req, res, next) => {
+  const { role } = getUserContext(req);
+  if (role === 3) {
+    return res.status(403).json({ message: 'Acceso restringido. Perfil recepcionista no autorizado en módulo médico.' });
+  }
+  next();
+});
+
 // GET /api/doctores/me -> Obtener perfil del doctor autenticado
 router.get('/me', async (req, res) => {
   const { userId, role } = getUserContext(req);

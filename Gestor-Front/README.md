@@ -1,19 +1,18 @@
 # Gestor-Front
 
-This template should help get you started developing with Vue 3 in Vite.
+Aplicación Vue 3 + Vite para el panel del hospital.
 
-## Recommended IDE Setup
+## Módulos principales
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- Panel de recepcionista:
+  - Gestión de pacientes, doctores y citas
+  - Ventas (medicamentos + servicios) en un carrito unificado
+  - Alta de nuevas recepcionistas (rol 3) desde el propio panel
 
-## Recommended Browser Setup
+## Herramientas recomendadas
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd) 
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+- Editor: [VS Code](https://code.visualstudio.com/) con [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
+- DevTools: [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
 
 ## Customize configuration
 

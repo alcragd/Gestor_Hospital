@@ -275,12 +275,38 @@ class RecepcionService {
 
     // ==================== CITAS ====================
 
-    async cancelarCita(idCita, motivo) {
+    async listarCitas(filtros = {}) {
+        try {
+            let url = `${API_URL}/citas`;
+            const params = [];
+            
+            if (filtros.estatus) params.push(`estatus=${filtros.estatus}`);
+            if (filtros.doctor) params.push(`doctor=${encodeURIComponent(filtros.doctor)}`);
+            if (filtros.paciente) params.push(`paciente=${encodeURIComponent(filtros.paciente)}`);
+            if (filtros.fechaInicio) params.push(`fechaInicio=${filtros.fechaInicio}`);
+            if (filtros.fechaFin) params.push(`fechaFin=${filtros.fechaFin}`);
+            
+            if (params.length > 0) url += '?' + params.join('&');
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+
+            if (!response.ok) throw new Error('Error al listar citas');
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.listarCitas:', error);
+            throw error;
+        }
+    }
+
+    async cancelarCita(idCita, motivo, canceladoPor = 'Paciente') {
         try {
             const response = await fetch(`${API_URL}/citas/${idCita}/cancelar`, {
                 method: 'POST',
                 headers: this.getHeaders(),
-                body: JSON.stringify({ Motivo: motivo })
+                body: JSON.stringify({ Motivo: motivo, Cancelado_Por: canceladoPor })
             });
 
             if (!response.ok) {
@@ -291,6 +317,40 @@ class RecepcionService {
             return await response.json();
         } catch (error) {
             console.error('Error en RecepcionService.cancelarCita:', error);
+            throw error;
+        }
+    }
+
+    async listarCitasPaciente(idPacienteOUser) {
+        try {
+            const response = await fetch(`http://localhost:3000/api/citas/paciente/${idPacienteOUser}`, {
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+            if (!response.ok) throw new Error('Error al obtener citas del paciente');
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.listarCitasPaciente:', error);
+            throw error;
+        }
+    }
+
+    async crearRecepcionista(datos) {
+        try {
+            const response = await fetch(`${API_URL}/recepcionistas`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(datos)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al crear recepcionista');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.crearRecepcionista:', error);
             throw error;
         }
     }

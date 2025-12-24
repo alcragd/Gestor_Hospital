@@ -93,13 +93,14 @@ class RecepcionService {
 
     // ==================== DOCTORES ====================
 
-    async listarDoctores(especialidad = '', busqueda = '') {
+    async listarDoctores(especialidad = '', busqueda = '', incluirInactivos = false) {
         try {
             let url = `${API_URL}/doctores`;
             const params = [];
             
             if (especialidad) params.push(`especialidad=${especialidad}`);
             if (busqueda) params.push(`busqueda=${encodeURIComponent(busqueda)}`);
+            if (incluirInactivos) params.push('incluirInactivos=true');
             
             if (params.length > 0) url += '?' + params.join('&');
 
@@ -167,6 +168,25 @@ class RecepcionService {
             return await response.json();
         } catch (error) {
             console.error('Error en RecepcionService.actualizarDoctor:', error);
+            throw error;
+        }
+    }
+
+    async darDeBajaDoctor(idDoctor) {
+        try {
+            const response = await fetch(`${API_URL}/doctores/${idDoctor}/baja`, {
+                method: 'POST',
+                headers: this.getHeaders()
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al dar de baja doctor');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.darDeBajaDoctor:', error);
             throw error;
         }
     }
@@ -351,6 +371,66 @@ class RecepcionService {
             return await response.json();
         } catch (error) {
             console.error('Error en RecepcionService.crearRecepcionista:', error);
+            throw error;
+        }
+    }
+
+    async listarRecepcionistas(busqueda = '', incluirInactivos = false) {
+        try {
+            let url = `${API_URL}/recepcionistas`;
+            const params = [];
+            if (busqueda) params.push(`busqueda=${encodeURIComponent(busqueda)}`);
+            if (incluirInactivos) params.push('incluirInactivos=true');
+            if (params.length > 0) url += '?' + params.join('&');
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+
+            if (!response.ok) throw new Error('Error al listar recepcionistas');
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.listarRecepcionistas:', error);
+            throw error;
+        }
+    }
+
+    async darDeBajaRecepcionista(idEmpleado) {
+        try {
+            const response = await fetch(`${API_URL}/recepcionistas/${idEmpleado}/baja`, {
+                method: 'POST',
+                headers: this.getHeaders()
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al dar de baja recepcionista');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.darDeBajaRecepcionista:', error);
+            throw error;
+        }
+    }
+
+    async actualizarRecepcionista(idEmpleado, data) {
+        try {
+            const response = await fetch(`${API_URL}/recepcionistas/${idEmpleado}`, {
+                method: 'PUT',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al actualizar recepcionista');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.actualizarRecepcionista:', error);
             throw error;
         }
     }

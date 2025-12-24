@@ -62,6 +62,7 @@ router.get('/doctores', recepcionController.listarDoctores);
 router.get('/doctores/:id', recepcionController.obtenerDoctor);
 router.post('/doctores', recepcionController.crearDoctor);
 router.put('/doctores/:id', recepcionController.actualizarDoctor);
+router.post('/doctores/:id/baja', recepcionController.darDeBajaDoctor);
 
 // ═══════════════════════════════════════════════════════════════
 // RUTAS - GESTIÓN DE RECEPCIONISTAS
@@ -71,6 +72,7 @@ router.get('/recepcionistas', recepcionController.listarRecepcionistas);
 router.get('/recepcionistas/:id', recepcionController.obtenerRecepcionista);
 router.post('/recepcionistas', recepcionController.crearRecepcionista);
 router.put('/recepcionistas/:id', recepcionController.actualizarRecepcionista);
+router.post('/recepcionistas/:id/baja', recepcionController.darDeBajaRecepcionista);
 
 // ═══════════════════════════════════════════════════════════════
 // RUTAS - SERVICIOS EXTRA

@@ -198,11 +198,12 @@ router.post("/loginGeneral", async (req, res) => {
                         e.Paterno,
                         e.Materno,
                         e.Telefono_cel,
-                        esp.Nombre AS Especialidad
+                        esp.Nombre AS Especialidad,
+                        e.Activo
                     FROM Doctores d
                     JOIN Empleados e ON e.Id_Empleado = d.Id_Empleado
                     JOIN Especialidades esp ON esp.Id_Especialidad = d.Id_Especialidad
-                    WHERE e.Id_User = @userId
+                    WHERE e.Id_User = @userId AND e.Activo = 1
                 `);
 
             if (doctorRes.recordset.length > 0) {
@@ -216,7 +217,8 @@ router.post("/loginGeneral", async (req, res) => {
                     materno: doctor.Materno || "",
                     correo: user.Correo,
                     telefono: doctor.Telefono_cel,
-                    especialidad: doctor.Especialidad
+                    especialidad: doctor.Especialidad,
+                    activo: doctor.Activo
                 };
             }
 
@@ -259,9 +261,10 @@ router.post("/loginGeneral", async (req, res) => {
                         e.Nombre,
                         e.Paterno,
                         e.Materno,
-                        e.Telefono_cel
+                        e.Telefono_cel,
+                        e.Activo
                     FROM Empleados e
-                    WHERE e.Id_User = @userId
+                    WHERE e.Id_User = @userId AND e.Activo = 1
                 `);
 
             if (empRes.recordset.length > 0) {
@@ -274,7 +277,8 @@ router.post("/loginGeneral", async (req, res) => {
                     paterno: emp.Paterno,
                     materno: emp.Materno || "",
                     correo: user.Correo,
-                    telefono: emp.Telefono_cel
+                    telefono: emp.Telefono_cel,
+                    activo: emp.Activo
                 };
             }
         }
@@ -283,7 +287,7 @@ router.post("/loginGeneral", async (req, res) => {
         if (Object.keys(userData).length === 0) {
             return res.json({ 
                 success: false, 
-                message: "Perfil de usuario no encontrado en el sistema" 
+                message: "Perfil de usuario no encontrado en el sistema o inactivo" 
             });
         }
 

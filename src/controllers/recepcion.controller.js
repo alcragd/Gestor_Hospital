@@ -137,8 +137,12 @@ exports.actualizarPaciente = async (req, res) => {
 
 exports.listarDoctores = async (req, res) => {
     try {
-        const { especialidad, busqueda } = req.query;
-        const doctores = await recepcionService.listarDoctores({ especialidad, busqueda });
+        const { especialidad, busqueda, incluirInactivos } = req.query;
+        const doctores = await recepcionService.listarDoctores({
+            especialidad,
+            busqueda,
+            incluirInactivos: incluirInactivos === 'true'
+        });
         
         res.json({
             success: true,
@@ -260,14 +264,37 @@ exports.actualizarDoctor = async (req, res) => {
     }
 };
 
+exports.darDeBajaDoctor = async (req, res) => {
+    try {
+        const idDoctor = parseInt(req.params.id, 10);
+        if (isNaN(idDoctor)) {
+            return res.status(400).json({ message: 'ID de doctor inválido' });
+        }
+
+        const resultado = await recepcionService.darDeBajaDoctor(idDoctor, `Recepcionista_${req.headers['x-user-id'] || 'N/A'}`);
+
+        res.status(200).json({
+            success: true,
+            message: resultado.yaInactivo ? 'El doctor ya estaba inactivo' : 'Doctor dado de baja',
+            canceladas: resultado.canceladas || 0
+        });
+    } catch (error) {
+        console.error('❌ Error POST /api/recepcion/doctores/:id/baja:', error);
+        res.status(500).json({
+            message: 'Error al dar de baja doctor',
+            details: error.message
+        });
+    }
+};
+
 // ═══════════════════════════════════════════════════════════════
 // GESTIÓN DE RECEPCIONISTAS
 // ═══════════════════════════════════════════════════════════════
 
 exports.listarRecepcionistas = async (req, res) => {
     try {
-        const { busqueda } = req.query;
-        const recepcionistas = await recepcionService.listarRecepcionistas({ busqueda });
+        const { busqueda, incluirInactivos } = req.query;
+        const recepcionistas = await recepcionService.listarRecepcionistas({ busqueda, incluirInactivos: incluirInactivos === 'true' });
         
         res.json({
             success: true,
@@ -384,6 +411,28 @@ exports.actualizarRecepcionista = async (req, res) => {
         
         res.status(500).json({
             message: 'Error al actualizar recepcionista',
+            details: error.message
+        });
+    }
+};
+
+exports.darDeBajaRecepcionista = async (req, res) => {
+    try {
+        const idEmpleado = parseInt(req.params.id, 10);
+        if (isNaN(idEmpleado)) {
+            return res.status(400).json({ message: 'ID de empleado inválido' });
+        }
+
+        const resultado = await recepcionService.darDeBajaRecepcionista(idEmpleado, `Recepcionista_${req.headers['x-user-id'] || 'N/A'}`);
+
+        res.status(200).json({
+            success: true,
+            message: resultado.yaInactivo ? 'La recepcionista ya estaba inactiva' : 'Recepcionista dada de baja'
+        });
+    } catch (error) {
+        console.error('❌ Error POST /api/recepcion/recepcionistas/:id/baja:', error);
+        res.status(500).json({
+            message: 'Error al dar de baja recepcionista',
             details: error.message
         });
     }

@@ -42,18 +42,24 @@
               <th>Especialidad</th>
               <th>Cédula</th>
               <th>Teléfono</th>
+              <th>Estatus</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="doctor in doctores" :key="doctor.Id_Doctor">
+            <tr v-for="doctor in doctores" :key="doctor.Id_Doctor" :class="{ 'fila-inactiva': doctor.Activo === false || doctor.Activo === 0 }">
               <td>{{ doctor.Nombre }} {{ doctor.Paterno }}</td>
               <td>{{ doctor.Especialidad }}</td>
               <td>{{ doctor.Cedula.trim() }}</td>
               <td>{{ doctor.Telefono_cel }}</td>
               <td>
+                <span v-if="doctor.Activo === false || doctor.Activo === 0" class="badge inactivo">Inactivo</span>
+                <span v-else class="badge activo">Activo</span>
+              </td>
+              <td>
                 <button class="btn-view" @click="verDetalles(doctor)">Ver</button>
-                <button class="btn-edit" @click="editarDoctor(doctor)">Editar</button>
+                <button class="btn-edit" @click="editarDoctor(doctor)" :disabled="doctor.Activo === false || doctor.Activo === 0">Editar</button>
+                <button class="btn-danger" @click="darDeBaja(doctor)" :disabled="doctor.Activo === false || doctor.Activo === 0">Dar de baja</button>
               </td>
             </tr>
           </tbody>
@@ -285,6 +291,7 @@ export default {
       loading: false,
       cargando: false,
       guardando: false,
+      bajando: false,
       mensajeError: '',
       mensajeExito: '',
       mensajeErrorEdit: '',
@@ -324,7 +331,7 @@ export default {
     async cargarDoctores() {
       this.loading = true;
       try {
-        const res = await RecepcionService.listarDoctores();
+        const res = await RecepcionService.listarDoctores('', '', true);
         this.doctores = res.doctores || [];
       } catch (error) {
         this.mensajeError = 'Error al cargar doctores: ' + error.message;
@@ -335,7 +342,7 @@ export default {
     async buscarDoctores() {
       this.loading = true;
       try {
-        const res = await RecepcionService.listarDoctores(this.filtroEspecialidad, this.busqueda);
+        const res = await RecepcionService.listarDoctores(this.filtroEspecialidad, this.busqueda, true);
         this.doctores = res.doctores || [];
       } catch (error) {
         this.mensajeError = 'Error en búsqueda: ' + error.message;
@@ -357,6 +364,24 @@ export default {
       };
       this.mensajeErrorEdit = '';
       this.mensajeExitoEdit = '';
+    },
+    async darDeBaja(doctor) {
+      if (!doctor || doctor.Activo === false || doctor.Activo === 0) return;
+      const confirmar = window.confirm('Dar de baja a este doctor y cancelar sus citas pendientes?');
+      if (!confirmar) return;
+
+      this.bajando = true;
+      this.mensajeError = '';
+      this.mensajeExito = '';
+      try {
+        const res = await RecepcionService.darDeBajaDoctor(doctor.Id_Doctor);
+        this.mensajeExito = `${res.message || 'Doctor dado de baja'}. Citas canceladas: ${res.canceladas ?? 0}`;
+        await this.cargarDoctores();
+      } catch (error) {
+        this.mensajeError = 'Error al dar de baja: ' + error.message;
+      } finally {
+        this.bajando = false;
+      }
     },
     cerrarEdicion() {
       this.doctorEditando = null;
@@ -749,6 +774,43 @@ button[type="submit"]:disabled {
 .btn-primary:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: #fff;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-danger:disabled {
+  background: #d6d6d6;
+  cursor: not-allowed;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge.activo {
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.badge.inactivo {
+  background: #fdecea;
+  color: #c0392b;
+}
+
+.fila-inactiva {
+  opacity: 0.75;
 }
 
 .btn-secondary {

@@ -240,6 +240,7 @@ class RecepcionService {
                     E.Telefono_cel,
                     E.Edad,
                     E.Sexo,
+                    E.Activo,
                     D.Cedula,
                     D.Rfc,
                     ESP.Nombre AS Especialidad,
@@ -262,6 +263,10 @@ class RecepcionService {
             if (filtros.busqueda) {
                 query += ` AND (E.Nombre LIKE @busqueda OR E.Paterno LIKE @busqueda OR D.Cedula LIKE @busqueda)`;
                 request.input('busqueda', db.sql.VarChar, `%${filtros.busqueda}%`);
+            }
+
+            if (!filtros.incluirInactivos) {
+                query += ` AND E.Activo = 1`;
             }
             
             query += ` ORDER BY E.Paterno, E.Nombre`;
@@ -295,6 +300,7 @@ class RecepcionService {
                         E.Edad,
                         E.Sueldo,
                         E.Sexo,
+                        E.Activo,
                         E.Id_User,
                         U.Username,
                         ESP.Nombre AS Especialidad
@@ -513,6 +519,7 @@ class RecepcionService {
                     E.Sexo,
                     E.CURP,
                     E.Sueldo,
+                    E.Activo,
                     U.Username,
                     U.Id_User
                 FROM Empleados E
@@ -523,6 +530,10 @@ class RecepcionService {
             if (filtros.busqueda) {
                 query += ` AND (E.Nombre LIKE @busqueda OR E.Paterno LIKE @busqueda OR E.CURP LIKE @busqueda)`;
                 request.input('busqueda', db.sql.VarChar, `%${filtros.busqueda}%`);
+            }
+
+            if (!filtros.incluirInactivos) {
+                query += ` AND E.Activo = 1`;
             }
             
             query += ` ORDER BY E.Paterno, E.Nombre`;
@@ -1077,6 +1088,114 @@ class RecepcionService {
             throw error;
         }
     }
+
+        async darDeBajaDoctor(idDoctor, usuarioRegistro = 'Recepcionista') {
+            const pool = await db.connect();
+            const transaction = new db.sql.Transaction(pool);
+
+            try {
+                await transaction.begin();
+                const req = new db.sql.Request(transaction);
+
+                const info = await req
+                    .input('idDoctor', db.sql.Int, idDoctor)
+                    .query(`
+                        SELECT D.Id_Doctor, D.Id_Empleado, E.Activo
+                        FROM Doctores D
+                        INNER JOIN Empleados E ON D.Id_Empleado = E.Id_Empleado
+                        WHERE D.Id_Doctor = @idDoctor
+                    `);
+
+                if (info.recordset.length === 0) {
+                    throw new Error('Doctor no encontrado');
+                }
+
+                const { Id_Empleado: idEmpleado, Activo } = info.recordset[0];
+                if (Activo === false || Activo === 0) {
+                    return { yaInactivo: true, canceladas: 0 };
+                }
+
+                await req
+                    .input('idEmpleado', db.sql.Int, idEmpleado)
+                    .query(`UPDATE Empleados SET Activo = 0 WHERE Id_Empleado = @idEmpleado`);
+
+                const cancelReq = new db.sql.Request(transaction);
+                const cancelRes = await cancelReq
+                    .input('idDoctor', db.sql.Int, idDoctor)
+                    .query(`
+                        UPDATE Citas
+                        SET ID_Estatus = 5
+                        WHERE Id_Doc = @idDoctor AND ID_Estatus IN (1, 2);
+                        SELECT @@ROWCOUNT AS canceladas;
+                    `);
+
+                await transaction.commit();
+
+                await pool.request()
+                    .input('reg', db.sql.Int, idDoctor)
+                    .input('usr', db.sql.VarChar, usuarioRegistro)
+                    .input('det', db.sql.VarChar, `Doctor dado de baja. Citas canceladas: ${cancelRes.recordset[0].canceladas}`)
+                    .query(`
+                        INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                        VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Doctores')
+                    `);
+
+                return { yaInactivo: false, canceladas: cancelRes.recordset[0].canceladas };
+
+            } catch (error) {
+                await transaction.rollback();
+                console.error('❌ Error al dar de baja doctor:', error);
+                throw error;
+            }
+        }
+
+        async darDeBajaRecepcionista(idEmpleado, usuarioRegistro = 'Recepcionista') {
+            const pool = await db.connect();
+            const transaction = new db.sql.Transaction(pool);
+
+            try {
+                await transaction.begin();
+                const req = new db.sql.Request(transaction);
+
+                const info = await req
+                    .input('idEmpleado', db.sql.Int, idEmpleado)
+                    .query(`
+                        SELECT E.Id_Empleado, E.Activo
+                        FROM Empleados E
+                        INNER JOIN Usuarios U ON E.Id_User = U.Id_User
+                        WHERE E.Id_Empleado = @idEmpleado AND U.ID_Tipo_User = 3
+                    `);
+
+                if (info.recordset.length === 0) {
+                    throw new Error('Recepcionista no encontrado');
+                }
+
+                const { Activo } = info.recordset[0];
+                if (Activo === false || Activo === 0) {
+                    return { yaInactivo: true };
+                }
+
+                await req.query(`UPDATE Empleados SET Activo = 0 WHERE Id_Empleado = @idEmpleado`);
+
+                await transaction.commit();
+
+                await pool.request()
+                    .input('reg', db.sql.Int, idEmpleado)
+                    .input('usr', db.sql.VarChar, usuarioRegistro)
+                    .input('det', db.sql.VarChar, `Recepcionista dado de baja`)
+                    .query(`
+                        INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                        VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Empleados')
+                    `);
+
+                return { yaInactivo: false };
+
+            } catch (error) {
+                await transaction.rollback();
+                console.error('❌ Error al dar de baja recepcionista:', error);
+                throw error;
+            }
+        }
 }
 
 module.exports = new RecepcionService();

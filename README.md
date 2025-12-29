@@ -104,14 +104,25 @@ Debería ver: `Local: http://localhost:5173`
 
 Abrir navegador en `http://localhost:5173`
 
+## ✅ Fase 4 — Cierre y Demostración
+
+- Interfaz por rol con acceso protegido (login.html → doctor/paciente/farmacia/recepcion).
+- Dashboards finales:
+    - Paciente: agendar, ver, pagar, cancelar citas.
+    - Doctor: ver agenda con filtros (informativo).
+    - Recepción: CRUD pacientes/doctores, citas, ventas.
+    - Farmacia: inventario, venta y actualización de stock.
+- Confirmaciones para acciones críticas y mensajes de error amigables.
+- Sin cambios en BD ni reglas de negocio; solo consumo de endpoints existentes.
+
 ## 👥 Usuarios de Prueba
 
 | Tipo | Usuario | Rol ID |
 |------|---------|--------|
 | Recepcionista | rec_laura | 3 |
-| Doctor | (Por crear) | 1 |
-| Farmacéutico | (Por crear) | 2 |
-| Paciente | (Por crear) | 4 |
+| Doctor | (existente en BD) | 1 |
+| Farmacéutico | (existente en BD) | 2 |
+| Paciente | Regístrate en login (createFull) | 4 |
 
 ## 📡 API Endpoints
 
@@ -142,25 +153,45 @@ PUT    /api/recepcion/doctores/:id       # Actualizar
 ### Citas
 
 ```http
-POST   /api/citas                        # Crear cita
-GET    /api/citas/paciente/:id           # Citas de paciente
-PUT    /api/citas/:id                    # Actualizar
-DELETE /api/citas/:id                    # Cancelar
+POST   /api/citas/agendar                # Paciente agenda autenticado (headers x-user-*)
+GET    /api/citas/mis-citas              # Historial de citas del paciente autenticado
+GET    /api/citas/mis-citas-doctor       # Historial de citas del doctor autenticado
+GET    /api/citas/especialidades         # Listado de especialidades
+GET    /api/citas/doctores/:id_especialidad
+POST   /api/citas/disponibilidad         # Slots ocupados
+POST   /api/citas/horario-trabajo        # Rangos de trabajo
 ```
 
 ### Servicios
 
 ```http
 GET    /api/recepcion/servicios          # Listar servicios
-POST   /api/recepcion/venta-servicio     # Registrar venta
+POST   /api/recepcion/servicios/venta    # Registrar venta
 ```
 
 ### Farmacia
 
 ```http
 GET    /api/recepcion/medicamentos       # Inventario
-POST   /api/recepcion/venta-medicina     # Registrar venta
-PUT    /api/recepcion/medicamentos/:id   # Actualizar stock
+POST   /api/recepcion/medicamentos/venta # Registrar venta
+PUT    /api/recepcion/medicamentos/:id/stock   # Actualizar stock
+
+### Pagos
+
+```http
+POST   /api/pagos/registrar              # Registrar pago
+GET    /api/pagos/cita/:id               # Detalle de pago por cita
+GET    /api/pagos/plazo/:id              # Verificar plazo de pago (8h)
+GET    /api/pagos/paciente/:id           # Historial de pagos
+```
+
+### Cancelaciones
+
+```http
+POST   /api/cancelaciones/mis-citas/:id_cita   # Paciente cancela autenticado
+GET    /api/cancelaciones/calcular-reembolso/:id
+GET    /api/cancelaciones/paciente/:id
+```
 ```
 
 ## 📂 Estructura del Proyecto
@@ -217,6 +248,7 @@ GestorHospital/
 
 - Autenticación basada en sesiones con localStorage
 - Validación de roles en rutas protegidas
+- Bloqueo de acceso por URL directa en páginas públicas
 - Sanitización de inputs en backend
 - Prepared statements para prevenir SQL injection
 
@@ -241,6 +273,7 @@ GestorHospital/
 - Verificar que el backend esté corriendo en puerto 3000
 - Limpiar cache del navegador (Ctrl + Shift + R)
 - Revisar consola del navegador (F12) para errores
+ - Confirmar que el rol del usuario coincide con la página (ej. doctor.html requiere rol 1)
 
 ### Error de CORS
 
@@ -258,6 +291,21 @@ GestorHospital/
 - Los componentes utilizan Composition API y Options API
 - Bootstrap se importa globalmente en `main.js`
 - Las validaciones de citas se ejecutan en el backend
+
+## 🧪 Guía de Pruebas (Resumen)
+
+- Paciente:
+    - Login → paciente.html → agendar cita (recibo mostrado).
+    - Pagar cita programada → verificar ticket.
+    - Cancelar cita (programada/pagada) → ver mensaje y reembolso calculado.
+- Doctor:
+    - Login → doctor.html → ver agenda con filtros.
+- Recepción:
+    - CRUD Pacientes/Doctores, gestión de citas, ventas (Servicios/Medicamentos).
+- Farmacia:
+    - Inventario, venta y actualización de stock.
+
+Consistencia: flujos completos sin errores, permisos correctos por rol. Ningún cambio de BD.
 
 ## 👨‍💻 Autor
 

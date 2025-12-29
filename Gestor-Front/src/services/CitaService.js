@@ -26,6 +26,31 @@ class CitaService {
         }
     }
 
+    // Agendar cita autenticado (usa cabeceras x-user-*) y endpoint /agendar
+    async agendarCitaAutenticado({ Id_Doctor, Fecha_Cita, Hora_Inicio, Hora_Fin }) {
+        const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('idUser'); // Id_User de Usuarios
+        try {
+            const response = await fetch(`${API_URL}/agendar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-role': userRole,
+                    'x-user-id': userId
+                },
+                body: JSON.stringify({ Id_Doctor, Fecha_Cita, Hora_Inicio, Hora_Fin })
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.details || errorData.message || 'Error al agendar la cita');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en CitaService.agendarCitaAutenticado:', error);
+            throw error;
+        }
+    }
+
 
     async getEspecialidades() {
         const response = await fetch(`${API_URL}/especialidades`);
@@ -68,6 +93,38 @@ class CitaService {
             console.error('Error en CitaService.getCitasPaciente:', error);
             throw error;
         }
+    }
+
+    // Historial del paciente autenticado
+    async misCitasPaciente(params = {}) {
+        const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('idUser');
+        const q = new URLSearchParams(params).toString();
+        const url = q ? `${API_URL}/mis-citas?${q}` : `${API_URL}/mis-citas`;
+        const response = await fetch(url, {
+            headers: {
+                'x-user-role': userRole,
+                'x-user-id': userId
+            }
+        });
+        if (!response.ok) throw new Error('Error al obtener mis citas');
+        return response.json();
+    }
+
+    // Historial del doctor autenticado
+    async misCitasDoctor(params = {}) {
+        const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('idUser');
+        const q = new URLSearchParams(params).toString();
+        const url = q ? `${API_URL}/mis-citas-doctor?${q}` : `${API_URL}/mis-citas-doctor`;
+        const response = await fetch(url, {
+            headers: {
+                'x-user-role': userRole,
+                'x-user-id': userId
+            }
+        });
+        if (!response.ok) throw new Error('Error al obtener citas del doctor');
+        return response.json();
     }
 
 }

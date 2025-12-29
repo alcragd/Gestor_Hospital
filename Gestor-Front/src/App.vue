@@ -1,12 +1,18 @@
 <script>
 import FormularioCita from './components/FormularioCita.vue'
 import PanelRecepcionista from './components/recepcion/PanelRecepcionista.vue'
+import Farmacia from './components/recepcion/Farmacia.vue'
+import PanelPaciente from './components/paciente/PanelPaciente.vue'
+import PanelDoctor from './components/doctor/PanelDoctor.vue'
 
 export default {
   name: 'App',
   components: {
     FormularioCita,
-    PanelRecepcionista
+    PanelRecepcionista,
+    Farmacia,
+    PanelPaciente,
+    PanelDoctor
   },
   data() {
     const role = localStorage.getItem('userRole');
@@ -54,10 +60,15 @@ export default {
 
 <template>
   <div id="app">
-    <!-- Mostrar panel de recepcionista si el rol es 3 -->
+    <!-- Recepcionista -->
     <PanelRecepcionista v-if="userRole === 3" />
-    
-    <!-- Mostrar formulario de cita por defecto -->
+    <!-- Farmacéutico -->
+    <Farmacia v-else-if="userRole === 2" />
+    <!-- Doctor -->
+    <PanelDoctor v-else-if="userRole === 1" />
+    <!-- Paciente -->
+    <PanelPaciente v-else-if="userRole === 4" />
+    <!-- Invitado / fallback: agendar básica -->
     <div v-else class="bg-light min-vh-100 py-5">
       <FormularioCita />
     </div>

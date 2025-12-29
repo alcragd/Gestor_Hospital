@@ -399,25 +399,29 @@ seleccionarSlot(slot) {
       };
 
       const dataToSend = {
-        ...this.cita,
+        Id_Doctor: this.cita.Id_Doctor,
+        // Mantener fecha en formato YYYY-MM-DD sin alteraciones
+        Fecha_Cita: this.cita.Fecha_Cita,
         Hora_Inicio: formatearHora(this.cita.Hora_Inicio),
-        Hora_Fin: formatearHora(this.cita.Hora_Fin),
+        Hora_Fin: formatearHora(this.cita.Hora_Fin)
       };
 
-      console.log('Datos a enviar:', dataToSend);
+      console.log('Datos a enviar (autenticado):', dataToSend);
 
       try {
-        const response = await CitaService.crearCita(dataToSend);
-        this.mensaje = response.message || 'Cita creada exitosamente.';
+        const res = await CitaService.agendarCitaAutenticado(dataToSend);
+        this.mensaje = res.message || 'Cita agendada exitosamente.';
         this.isSuccess = true;
         this.resetForm();
-        // ⭐ Recargar las citas después de crear una nueva
         await this.cargarCitas();
-        
+        this.$emit('cita-creada');
+        if (res.recibo) {
+          alert(`Recibo generado. Folio: ${res.recibo.folio}\nDoctor: ${res.recibo.doctor}\nEspecialidad: ${res.recibo.especialidad}\nCosto: $${res.recibo.costo}`);
+        }
+
       } catch (error) {
         this.mensaje = `Fallo al agendar: ${error.message}`;
         this.isSuccess = false;
-        
       } finally {
         this.isLoading = false;
       }

@@ -1,59 +1,85 @@
 <template>
   <div class="panel-paciente">
-    <div class="header">
-      <h5>Panel de Paciente</h5>
-      <div class="usuario">
-        <span>{{ nombreCompleto }}</span>
-        <button class="btn btn-sm btn-outline-danger" @click="logout">Cerrar sesión</button>
-      </div>
-    </div>
-
-    <div class="tabs">
-      <button :class="{active: tab==='agendar'}" @click="tab='agendar'">Agendar Cita</button>
-      <button :class="{active: tab==='mis'}" @click="tab='mis'">Mis Citas</button>
-    </div>
-
-    <div v-if="tab==='agendar'" class="tab-pane">
-      <FormularioCita @cita-creada="onCitaCreada" />
-    </div>
-
-    <div v-else class="tab-pane">
-      <div class="filtros">
-        <label>Desde <input type="date" v-model="filtros.fecha_inicio"></label>
-        <label>Hasta <input type="date" v-model="filtros.fecha_fin"></label>
-        <button class="btn btn-sm btn-primary" @click="cargarMisCitas">Actualizar</button>
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">Panel de Paciente</h5>
+            <small>{{ nombreCompleto }}</small>
+          </div>
+          <button class="btn btn-sm btn-outline-light" @click="logout">Cerrar sesión</button>
+        </div>
       </div>
 
-      <div v-if="mensaje" class="alert" :class="isError? 'alert-danger':'alert-info'">{{ mensaje }}</div>
+      <div class="card-body">
+        <ul class="nav nav-tabs mb-3">
+          <li class="nav-item">
+            <a class="nav-link" :class="{active: tab==='agendar'}" @click="tab='agendar'" href="#">Agendar Cita</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" :class="{active: tab==='mis'}" @click="tab='mis'" href="#">Mis Citas</a>
+          </li>
+        </ul>
 
-      <div v-if="citas.length===0" class="empty">No hay citas.</div>
-      <table v-else class="table table-sm">
-        <thead>
-          <tr>
-            <th>Folio</th>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>Doctor</th>
-            <th>Especialidad</th>
-            <th>Estatus</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="c in citas" :key="c.Id_Cita || c.folio">
-            <td>{{ c.Id_Cita || c.folio }}</td>
-            <td>{{ c.Fecha_cita_fmt || c.Fecha_cita || c.fecha_cita }}</td>
-            <td>{{ c.Hora_Inicio_fmt }} - {{ c.Hora_Fin_fmt }}</td>
-            <td>{{ c.Doctor }}</td>
-            <td>{{ c.Especialidad }}</td>
-            <td>{{ c.Estatus || c.Id_Estatus }}</td>
-            <td>
-              <button class="btn btn-sm btn-outline-danger" @click="confirmarCancelar(c)" :disabled="!puedeCancelar(c)">Cancelar</button>
-              <button class="btn btn-sm btn-success ms-1" @click="confirmarPagar(c)" :disabled="!puedePagar(c)">Pagar</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <div v-if="tab==='agendar'" class="tab-content">
+          <FormularioCita @cita-creada="onCitaCreada" />
+        </div>
+
+        <div v-else class="tab-content">
+          <div class="filtros mb-3">
+            <div class="row g-2 align-items-end">
+              <div class="col-auto">
+                <label class="form-label small mb-1">Desde</label>
+                <input type="date" class="form-control form-control-sm" v-model="filtros.fecha_inicio">
+              </div>
+              <div class="col-auto">
+                <label class="form-label small mb-1">Hasta</label>
+                <input type="date" class="form-control form-control-sm" v-model="filtros.fecha_fin">
+              </div>
+              <div class="col-auto">
+                <button class="btn btn-sm btn-primary" @click="cargarMisCitas">Actualizar</button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="mensaje" class="alert" :class="isError? 'alert-danger':'alert-info'">{{ mensaje }}</div>
+
+          <div v-if="citas.length===0" class="text-center text-muted py-4">
+            <p class="mb-0">No hay citas registradas para este período.</p>
+          </div>
+          <div v-else class="table-responsive">
+            <table class="table table-hover table-sm">
+              <thead class="table-light">
+                <tr>
+                  <th>Folio</th>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                  <th>Doctor</th>
+                  <th>Especialidad</th>
+                  <th>Estatus</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="c in citas" :key="c.Id_Cita || c.folio">
+                  <td><strong>{{ c.Id_Cita || c.folio }}</strong></td>
+                  <td>{{ c.Fecha_cita_fmt || c.Fecha_cita || c.fecha_cita }}</td>
+                  <td><span class="badge bg-secondary">{{ c.Hora_Inicio_fmt }} - {{ c.Hora_Fin_fmt }}</span></td>
+                  <td>{{ c.Doctor }}</td>
+                  <td>{{ c.Especialidad }}</td>
+                  <td>
+                    <span class="badge" :class="getEstatusBadge(c.Estatus || c.Id_Estatus)">{{ c.Estatus || c.Id_Estatus }}</span>
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-danger me-1" @click="confirmarCancelar(c)" :disabled="!puedeCancelar(c)">Cancelar</button>
+                    <button class="btn btn-sm btn-success" @click="confirmarPagar(c)" :disabled="!puedePagar(c)">Pagar</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -121,6 +147,14 @@ export default {
       if (Number.isNaN(d.getTime())) return '';
       return d.toISOString().slice(11,16);
     },
+    getEstatusBadge(estatus){
+      const e = String(estatus||'').toLowerCase();
+      if (e.includes('pagada') || e === '2') return 'bg-warning text-dark';
+      if (e.includes('atendida') || e === '6') return 'bg-success';
+      if (e.includes('cancelada') || ['3','4','5'].includes(e)) return 'bg-danger';
+      if (e.includes('pendiente') || e === '1') return 'bg-info';
+      return 'bg-secondary';
+    },
     puedeCancelar(c){
       const est = c.Id_Estatus || c.Estatus || '';
       // Permitir estatus 1 o 2 (Programada/Pagada)
@@ -171,13 +205,30 @@ export default {
 </script>
 
 <style scoped>
-.panel-paciente{ padding:16px; }
-.header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-.usuario{ display:flex; gap:8px; align-items:center; }
-.tabs{ display:flex; gap:8px; margin-bottom:12px; }
-.tabs button{ border:none; padding:8px 12px; background:#f0f0f0; cursor:pointer; }
-.tabs button.active{ background:#0d6efd; color:#fff; }
-.tab-pane{ background:#fff; padding:12px; border-radius:6px; }
-.filtros{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
-.empty{ padding:12px; color:#666; }
+.panel-paciente{ 
+  padding: 1.5rem; 
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+.card {
+  border-radius: 8px;
+  border: none;
+}
+.card-header {
+  border-radius: 8px 8px 0 0 !important;
+  padding: 1rem 1.25rem;
+}
+.nav-link {
+  cursor: pointer;
+}
+.table-responsive {
+  border-radius: 4px;
+}
+.badge {
+  font-size: 0.85rem;
+  padding: 0.35em 0.65em;
+}
+.tab-content {
+  margin-top: 0;
+}
 </style>

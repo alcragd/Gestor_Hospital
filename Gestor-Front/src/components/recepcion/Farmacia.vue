@@ -1,117 +1,125 @@
 <template>
   <div class="farmacia">
-    <h2>Gestión de Farmacia</h2>
-
-    <div class="tabs">
-      <button 
-        :class="{ active: tab === 'venta' }"
-        @click="tab = 'venta'">
-        Venta de Medicamentos
-      </button>
-      <button 
-        :class="{ active: tab === 'inventario' }"
-        @click="tab = 'inventario'">
-        Inventario
-      </button>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="mb-0">Gestión de Farmacia</h4>
     </div>
+
+    <ul class="nav nav-tabs mb-3">
+      <li class="nav-item">
+        <a class="nav-link" :class="{ active: tab === 'venta' }" @click="tab = 'venta'" href="#">Venta de Medicamentos</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" :class="{ active: tab === 'inventario' }" @click="tab = 'inventario'" href="#">Inventario</a>
+      </li>
+    </ul>
 
     <!-- VENTA DE MEDICAMENTOS -->
     <div v-if="tab === 'venta'" class="tab-content">
-      <div class="container">
-        <div class="medicamentos-disponibles">
-          <h3>Medicamentos Disponibles</h3>
-          <div class="search-bar">
-            <input 
-              v-model="busquedaMed" 
-              placeholder="Buscar medicamento..."
-              @input="buscarMedicamentos"
-              type="text">
-          </div>
+      <div class="row g-3">
+        <div class="col-lg-7">
+          <div class="card mb-3">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Medicamentos Disponibles</h5>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <input 
+                  v-model="busquedaMed" 
+                  placeholder="Buscar medicamento..."
+                  @input="buscarMedicamentos"
+                  type="text"
+                  class="form-control">
+              </div>
 
-          <div v-if="medicamentos.length > 0" class="medicamentos-grid">
-            <div 
-              v-for="med in medicamentos" 
-              :key="med.Id_Medicamento"
-              class="medicamento-card"
-              :class="{ 'sin-stock': med.Stock <= 0 }"
-              @click="agregarMedicamento(med)">
-              <h4>{{ med.Nombre }}</h4>
-              <p class="presentacion">{{ med.Presentacion }}</p>
-              <p class="stock" :class="{ 'bajo-stock': med.Stock < 10 }">
-                Stock: {{ med.Stock }}
-              </p>
-              <p class="precio">${{ med.Precio.toFixed(2) }}</p>
-              <button class="btn-agregar" :disabled="med.Stock <= 0">
-                {{ med.Stock > 0 ? '+ Agregar' : 'Sin Stock' }}
-              </button>
+              <div v-if="medicamentos.length > 0" class="medicamentos-grid">
+                <div 
+                  v-for="med in medicamentos" 
+                  :key="med.Id_Medicamento"
+                  class="medicamento-card"
+                  :class="{ 'sin-stock': med.Stock <= 0 }"
+                  @click="agregarMedicamento(med)">
+                  <h6 class="mb-1">{{ med.Nombre }}</h6>
+                  <p class="text-muted small mb-1">{{ med.Presentacion }}</p>
+                  <p class="mb-1" :class="{ 'text-warning': med.Stock < 10, 'text-danger': med.Stock <= 0 }">
+                    <strong>Stock: {{ med.Stock }}</strong>
+                  </p>
+                  <p class="text-primary mb-2"><strong>${{ med.Precio.toFixed(2) }}</strong></p>
+                  <button class="btn btn-sm btn-primary w-100" :disabled="med.Stock <= 0">
+                    {{ med.Stock > 0 ? '+ Agregar' : 'Sin Stock' }}
+                  </button>
+                </div>
+              </div>
+              <div v-else class="text-center text-muted py-4">Cargando medicamentos...</div>
             </div>
           </div>
-          <div v-else class="loading">Cargando medicamentos...</div>
         </div>
 
-        <div class="carrito-venta">
-          <h3>Carrito de Venta</h3>
-          
-          <div class="form-group">
-            <label>Nombre del Cliente *</label>
-            <input v-model="ventaData.Nombre_Cliente" type="text" placeholder="Nombre del cliente o genérico">
-          </div>
-
-          <div v-if="ventaData.medicamentos.length > 0" class="tabla-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Medicamento</th>
-                  <th>Cant.</th>
-                  <th>Precio</th>
-                  <th>Total</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(item, idx) in ventaData.medicamentos" :key="idx">
-                  <td>{{ item.Nombre }}</td>
-                  <td>
-                    <input 
-                      v-model.number="item.Cantidad" 
-                      type="number" 
-                      min="1"
-                      @change="recalcularTotal"
-                      class="cantidad-input">
-                  </td>
-                  <td>${{ item.Precio.toFixed(2) }}</td>
-                  <td>${{ (item.Precio * item.Cantidad).toFixed(2) }}</td>
-                  <td>
-                    <button class="btn-remove" @click="removerMedicamento(idx)">✕</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div v-else class="no-items">No hay medicamentos seleccionados</div>
-
-          <div class="resumen">
-            <div class="total-row">
-              <span>Total:</span>
-              <span class="total-amount">${{ totalVenta.toFixed(2) }}</span>
+        <div class="col-lg-5">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Carrito de Venta</h5>
             </div>
-          </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label">Nombre del Cliente *</label>
+                <input v-model="ventaData.Nombre_Cliente" type="text" class="form-control" placeholder="Nombre del cliente o genérico">
+              </div>
 
-          <div v-if="mensajeError" class="error">{{ mensajeError }}</div>
-          <div v-if="mensajeExito" class="success">{{ mensajeExito }}</div>
+              <div v-if="ventaData.medicamentos.length > 0" class="table-responsive mb-3">
+                <table class="table table-sm">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Medicamento</th>
+                      <th>Cant.</th>
+                      <th>Precio</th>
+                      <th>Total</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(item, idx) in ventaData.medicamentos" :key="idx">
+                      <td>{{ item.Nombre }}</td>
+                      <td>
+                        <input 
+                          v-model.number="item.Cantidad" 
+                          type="number" 
+                          min="1"
+                          @change="recalcularTotal"
+                          class="form-control form-control-sm" style="width: 60px;">
+                      </td>
+                      <td>${{ item.Precio.toFixed(2) }}</td>
+                      <td><strong>${{ (item.Precio * item.Cantidad).toFixed(2) }}</strong></td>
+                      <td>
+                        <button class="btn btn-sm btn-danger" @click="removerMedicamento(idx)">×</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div v-else class="text-center text-muted py-3">No hay medicamentos seleccionados</div>
 
-          <div class="botones">
-            <button 
-              @click="registrarVentaMed" 
-              :disabled="cargando || ventaData.medicamentos.length === 0 || !ventaData.Nombre_Cliente"
-              class="btn-registrar">
-              {{ cargando ? 'Registrando...' : 'Registrar Venta' }}
-            </button>
-            <button 
-              @click="limpiarCarrito"
-              class="btn-limpiar">
-              Limpiar
-            </button>
+              <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                <span class="fw-bold">Total:</span>
+                <span class="fs-5 text-primary fw-bold">${{ totalVenta.toFixed(2) }}</span>
+              </div>
+
+              <div v-if="mensajeError" class="alert alert-danger">{{ mensajeError }}</div>
+              <div v-if="mensajeExito" class="alert alert-success">{{ mensajeExito }}</div>
+
+              <div class="d-grid gap-2">
+                <button 
+                  @click="registrarVentaMed" 
+                  :disabled="cargando || ventaData.medicamentos.length === 0 || !ventaData.Nombre_Cliente"
+                  class="btn btn-success">
+                  {{ cargando ? 'Registrando...' : 'Registrar Venta' }}
+                </button>
+                <button 
+                  @click="limpiarCarrito"
+                  class="btn btn-outline-secondary">
+                  Limpiar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -119,63 +127,72 @@
 
     <!-- INVENTARIO -->
     <div v-if="tab === 'inventario'" class="tab-content">
-      <div class="search-bar">
-        <input 
-          v-model="busquedaInv" 
-          placeholder="Buscar medicamento..."
-          @input="buscarInventario"
-          type="text">
-        <label>
-          <input v-model="mostrarSinStock" type="checkbox">
-          Solo sin stock
-        </label>
-      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-8">
+              <input 
+                v-model="busquedaInv" 
+                placeholder="Buscar medicamento..."
+                @input="buscarInventario"
+                type="text"
+                class="form-control">
+            </div>
+            <div class="col-md-4">
+              <div class="form-check">
+                <input v-model="mostrarSinStock" type="checkbox" class="form-check-input" id="sinStockCheck" @change="buscarInventario">
+                <label class="form-check-label" for="sinStockCheck">Solo sin stock</label>
+              </div>
+            </div>
+          </div>
 
-      <div v-if="medicamentosInv.length > 0" class="tabla-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Medicamento</th>
-              <th>Presentación</th>
-              <th>Precio</th>
-              <th>Stock Actual</th>
-              <th>Nuevo Stock</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="med in medicamentosInv" :key="med.Id_Medicamento">
-              <td>{{ med.Nombre }}</td>
-              <td>{{ med.Presentacion }}</td>
-              <td>${{ med.Precio.toFixed(2) }}</td>
-              <td>
-                <span :class="{ 'sin-stock': med.Stock <= 0, 'bajo-stock': med.Stock > 0 && med.Stock < 10 }">
-                  {{ med.Stock }}
-                </span>
-              </td>
-              <td>
-                <input 
-                  v-model.number="med.nuevoStock" 
-                  type="number" 
-                  class="stock-input"
-                  min="0">
-              </td>
-              <td>
-                <button 
-                  @click="guardarStock(med)"
-                  :disabled="med.nuevoStock === undefined || med.nuevoStock === med.Stock || cargandoStock"
-                  class="btn-guardar">
-                  {{ cargandoStock ? 'Guardando...' : 'Guardar' }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div v-else class="no-data">No hay medicamentos</div>
+          <div v-if="medicamentosInv.length > 0" class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Medicamento</th>
+                  <th>Presentación</th>
+                  <th>Precio</th>
+                  <th>Stock Actual</th>
+                  <th>Nuevo Stock</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="med in medicamentosInv" :key="med.Id_Medicamento">
+                  <td>{{ med.Nombre }}</td>
+                  <td>{{ med.Presentacion }}</td>
+                  <td>${{ med.Precio.toFixed(2) }}</td>
+                  <td>
+                    <span class="badge" :class="{ 'bg-danger': med.Stock <= 0, 'bg-warning text-dark': med.Stock > 0 && med.Stock < 10, 'bg-success': med.Stock >= 10 }">
+                      {{ med.Stock }}
+                    </span>
+                  </td>
+                  <td>
+                    <input 
+                      v-model.number="med.nuevoStock" 
+                      type="number" 
+                      class="form-control form-control-sm" style="width: 100px;"
+                      min="0">
+                  </td>
+                  <td>
+                    <button 
+                      @click="guardarStock(med)"
+                      :disabled="med.nuevoStock === undefined || med.nuevoStock === med.Stock || cargandoStock"
+                      class="btn btn-sm btn-primary">
+                      {{ cargandoStock ? 'Guardando...' : 'Guardar' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="text-center text-muted py-4">No hay medicamentos</div>
 
-      <div v-if="mensajeError" class="error">{{ mensajeError }}</div>
-      <div v-if="mensajeExito" class="success">{{ mensajeExito }}</div>
+          <div v-if="mensajeError" class="alert alert-danger mt-3">{{ mensajeError }}</div>
+          <div v-if="mensajeExito" class="alert alert-success mt-3">{{ mensajeExito }}</div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -356,351 +373,49 @@ export default {
 
 <style scoped>
 .farmacia {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px;
+  max-width: 100%;
 }
 
-h2 {
-  color: #333;
-  margin-bottom: 20px;
-}
-
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.tabs button {
-  padding: 12px 20px;
-  background: #f5f5f5;
-  border: none;
+.nav-link {
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 4px 4px 0 0;
-}
-
-.tabs button.active {
-  background: #28a745;
-  color: white;
 }
 
 .tab-content {
-  background: white;
-  padding: 20px;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.container {
-  display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 20px;
-}
-
-h3 {
-  color: #333;
-  margin-bottom: 15px;
-}
-
-.search-bar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  align-items: center;
-}
-
-.search-bar input[type="text"] {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.search-bar label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 14px;
-  white-space: nowrap;
+  margin-top: 0;
 }
 
 .medicamentos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  max-height: 600px;
+  overflow-y: auto;
+  padding: 4px;
 }
 
 .medicamento-card {
   background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 15px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 12px;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.2s;
 }
 
 .medicamento-card:hover:not(.sin-stock) {
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   transform: translateY(-2px);
 }
 
 .medicamento-card.sin-stock {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.medicamento-card h4 {
-  margin: 0 0 8px 0;
-  color: #333;
-  font-size: 14px;
-}
-
-.medicamento-card .presentacion {
-  margin: 3px 0;
-  color: #666;
-  font-size: 12px;
-}
-
-.medicamento-card .stock {
-  margin: 5px 0;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.medicamento-card .stock.bajo-stock {
-  color: #ff9800;
-}
-
-.medicamento-card .stock.sin-stock {
-  color: #dc3545;
-}
-
-.medicamento-card .precio {
-  font-size: 16px;
-  font-weight: bold;
-  color: #28a745;
-  margin: 8px 0;
-}
-
-.btn-agregar {
-  width: 100%;
-  padding: 8px;
-  background: #28a745;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.btn-agregar:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.btn-agregar:hover:not(:disabled) {
-  background: #218838;
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-  color: #999;
-}
-
-.carrito-venta {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  height: fit-content;
-  position: sticky;
-  top: 20px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.tabla-container {
-  overflow-x: auto;
-  margin: 15px 0;
-}
-
-table {
-  width: 100%;
-  font-size: 12px;
-  border-collapse: collapse;
-}
-
-table thead {
   background: #f8f9fa;
-}
-
-table th {
-  padding: 8px;
-  text-align: left;
-  font-weight: 600;
-  border-bottom: 2px solid #ddd;
-}
-
-table td {
-  padding: 8px;
-  border-bottom: 1px solid #eee;
-}
-
-.cantidad-input, .stock-input {
-  width: 60px;
-  padding: 5px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 12px;
-}
-
-.btn-remove {
-  padding: 4px 8px;
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-remove:hover {
-  background: #c82333;
-}
-
-.btn-guardar {
-  padding: 4px 8px;
-  background: #17a2b8;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 11px;
-}
-
-.btn-guardar:hover:not(:disabled) {
-  background: #138496;
-}
-
-.btn-guardar:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.no-items, .no-data {
-  text-align: center;
-  padding: 20px;
-  color: #999;
-  font-size: 14px;
-}
-
-.resumen {
-  background: #f8f9fa;
-  padding: 15px;
-  border-radius: 4px;
-  margin: 15px 0;
-}
-
-.total-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
-}
-
-.total-amount {
-  color: #28a745;
-}
-
-.error, .success {
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 15px;
-  font-size: 13px;
-}
-
-.error {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.botones {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.btn-registrar, .btn-limpiar {
-  padding: 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.btn-registrar {
-  background: #28a745;
-  color: white;
-}
-
-.btn-registrar:hover:not(:disabled) {
-  background: #218838;
-}
-
-.btn-registrar:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.btn-limpiar {
-  background: #6c757d;
-  color: white;
-}
-
-.btn-limpiar:hover {
-  background: #5a6268;
 }
 
 @media (max-width: 900px) {
-  .container {
-    grid-template-columns: 1fr;
-  }
-
-  .carrito-venta {
-    position: static;
+  .medicamentos-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
 }
 </style>

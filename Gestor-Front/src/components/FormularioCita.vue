@@ -52,7 +52,7 @@
 
 <!-- BOTÓN PARA ABRIR EL PANEL -->
 <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen">
-  MENU
+  ☰
 </button>
 
   <div class="form-wrapper">

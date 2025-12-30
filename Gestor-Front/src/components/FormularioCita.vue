@@ -340,6 +340,47 @@ export default {
       }
       return slots;
     },
+    toMinutes(timeStr) {
+      if (!timeStr || typeof timeStr !== 'string') return null;
+      const parts = timeStr.split(':');
+      if (parts.length < 2) return null;
+      const h = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      if (Number.isNaN(h) || Number.isNaN(m)) return null;
+      return h * 60 + m;
+    },
+    isCitaActiva(cita) {
+      const est = cita.Id_Estatus || cita.Estatus;
+      const activos = [1, 2, 'Agendada - Pendiente de Pago', 'Pagada - Pendiente por Atender', 'Programada', 'Pagada'];
+      return activos.includes(est);
+    },
+    findOverlapWithOwnCitas(fecha, inicio, fin) {
+      if (!fecha || !inicio || !fin) return null;
+      const newStart = this.toMinutes(inicio);
+      const newEnd = this.toMinutes(fin);
+      if (newStart === null || newEnd === null) return null;
+
+      for (const c of this.citas) {
+        if (!c.Fecha_Cita || c.Fecha_Cita !== fecha) continue;
+        if (!this.isCitaActiva(c)) continue;
+
+        const start = this.toMinutes(c.Hora_Inicio || c.Hora_inicio);
+        const end = this.toMinutes(c.Hora_Fin || c.Hora_fin);
+        if (start === null || end === null) continue;
+
+        const overlaps = newStart < end && newEnd > start;
+        if (overlaps) {
+          return {
+            fecha: c.Fecha_Cita,
+            inicio: (c.Hora_Inicio || '').substring(0,5),
+            fin: (c.Hora_Fin || '').substring(0,5),
+            doctor: c.Nombre_Doctor || c.Doctor || c.Id_Doctor
+          };
+        }
+      }
+
+      return null;
+    },
     // Agrega este método en la sección de methods:
 seleccionarSlot(slot) {
     console.log("🎯 seleccionarSlot ejecutado");
@@ -409,6 +450,16 @@ seleccionarSlot(slot) {
       console.log('Datos a enviar (autenticado):', dataToSend);
 
       try {
+        const conflicto = this.findOverlapWithOwnCitas(dataToSend.Fecha_Cita, dataToSend.Hora_Inicio, dataToSend.Hora_Fin);
+        if (conflicto) {
+          const confirma = window.confirm(`Ya tienes una cita el ${conflicto.fecha} de ${conflicto.inicio}-${conflicto.fin} con ${conflicto.doctor || 'otro doctor'}.\n¿Deseas agendar de todos modos?`);
+          if (!confirma) {
+            this.mensaje = 'No se agendó la cita porque hay cruce de horario con otra cita.';
+            this.isLoading = false;
+            return;
+          }
+        }
+
         const res = await CitaService.agendarCitaAutenticado(dataToSend);
         this.mensaje = res.message || 'Cita agendada exitosamente.';
         this.isSuccess = true;
@@ -570,13 +621,22 @@ cargarUsuario() {
         };
 
         // ⭐ Filtrar solo citas del usuario actual
+    const activos = [1, 2, 'Agendada - Pendiente de Pago', 'Pagada - Pendiente por Atender', 'Programada', 'Pagada'];
+
     this.citas = citasRaw
       .filter(c => {
         const coincide = c.ID_Paciente == userId;
         if (!coincide) {
           console.warn(`⚠️ Cita ${c.Folio_Cita} filtrada: ID_Paciente=${c.ID_Paciente} vs userId=${userId}`);
+          return false;
         }
-        return coincide;
+
+        const est = c.Id_Estatus || c.Estatus;
+        const keep = activos.includes(est);
+        if (!keep) {
+          console.info(`ℹ️ Ocultando cita ${c.Folio_Cita || c.Id_Cita} por estatus ${est}`);
+        }
+        return keep;
       })
       .map(c => ({
         ...c,

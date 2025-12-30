@@ -16,6 +16,23 @@ class PagoController {
                     message: 'Se requiere ID de cita y método de pago' 
                 });
             }
+
+            // Pre-checar ventana de 8 horas usando tiempo de BD (GETDATE)
+            try {
+                const plazo = await pagoService.verificarPlazoPago(parseInt(Id_Cita, 10));
+                if (plazo.estadoPlazo === 'EXPIRADO') {
+                    return res.status(400).json({
+                        message: 'La ventana de pago de 8 horas ya expiró (según hora del servidor de BD).',
+                        detalles: {
+                            fechaSolicitud: plazo.fechaSolicitud,
+                            fechaLimitePago: plazo.fechaLimitePago,
+                            minutosTranscurridos: plazo.minutosTranscurridos
+                        }
+                    });
+                }
+            } catch (e) {
+                // Si el chequeo falla, continuar y dejar que el SP decida.
+            }
             
             const resultado = await pagoService.registrarPago(
                 Id_Cita, 

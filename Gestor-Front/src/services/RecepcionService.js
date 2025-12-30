@@ -7,6 +7,41 @@ class RecepcionService {
         this.userId = localStorage.getItem('userId');
     }
 
+    // ==================== HORARIO DOCTOR ====================
+
+    async obtenerHorarioDoctorDia(idDoctor, diaSemana) {
+        try {
+            const response = await fetch(`${API_URL}/doctores/${idDoctor}/horario/${encodeURIComponent(diaSemana)}`, {
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+            if (!response.ok) throw new Error('Error al obtener horario del doctor');
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.obtenerHorarioDoctorDia:', error);
+            throw error;
+        }
+    }
+
+    async actualizarHorarioDoctor(idDoctor, diaSemana, bloques) {
+        try {
+            const payload = { diaSemana, bloques };
+            const response = await fetch(`${API_URL}/doctores/${idDoctor}/horario`, {
+                method: 'PUT',
+                headers: this.getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al actualizar horario');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.actualizarHorarioDoctor:', error);
+            throw error;
+        }
+    }
+
     getHeaders() {
         return {
             'Content-Type': 'application/json',

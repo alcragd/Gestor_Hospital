@@ -87,13 +87,14 @@ class PagoService {
             const result = await pool.request()
                 .input('Id_Cita', db.sql.Int, idCita)
                 .query(`
+                    -- Cálculo directo usando el tiempo del servidor sin cambiar la zona del valor almacenado
                     SELECT 
                         C.Id_Cita,
-                        C.Fecha_Solicitud,
-                        DATEADD(HOUR, 8, CAST(C.Fecha_Solicitud AS DATETIME)) AS Fecha_Limite_Pago,
-                        DATEDIFF(MINUTE, CAST(C.Fecha_Solicitud AS DATETIME), GETDATE()) AS Minutos_Transcurridos,
+                        CONVERT(VARCHAR(23), CAST(C.Fecha_Solicitud AS DATETIME), 126) AS Fecha_Solicitud_TZ,
+                        CONVERT(VARCHAR(23), DATEADD(HOUR, 8, CAST(C.Fecha_Solicitud AS DATETIME)), 126) AS Fecha_Limite_Pago_TZ,
+                        DATEDIFF(MINUTE, CAST(C.Fecha_Solicitud AS DATETIME), SYSDATETIME()) AS Minutos_Transcurridos,
                         CASE 
-                            WHEN DATEDIFF(HOUR, CAST(C.Fecha_Solicitud AS DATETIME), GETDATE()) > 8 THEN 'EXPIRADO'
+                            WHEN DATEDIFF(MINUTE, CAST(C.Fecha_Solicitud AS DATETIME), SYSDATETIME()) > 480 THEN 'EXPIRADO'
                             ELSE 'VIGENTE'
                         END AS Estado_Plazo,
                         E.Precio AS Monto_a_Pagar,
@@ -114,8 +115,8 @@ class PagoService {
             
             return {
                 idCita: datos.Id_Cita,
-                fechaSolicitud: datos.Fecha_Solicitud,
-                fechaLimitePago: datos.Fecha_Limite_Pago,
+                fechaSolicitud: datos.Fecha_Solicitud_TZ,
+                fechaLimitePago: datos.Fecha_Limite_Pago_TZ,
                 minutosTranscurridos: datos.Minutos_Transcurridos,
                 minutosRestantes: Math.max(0, minutosRestantes),
                 estadoPlazo: datos.Estado_Plazo,

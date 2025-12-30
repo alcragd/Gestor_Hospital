@@ -21,6 +21,7 @@ Sistema integral de gestión hospitalaria desarrollado con Node.js, Express y Vu
 ### Módulos Implementados
 
 - **🔐 Autenticación** - Login multi-rol (Paciente, Doctor, Farmacéutico, Recepcionista)
+POST   /api/citas/:id/atender            # Doctor marca cita como atendida (requiere rol 1)
 - **👤 Gestión de Pacientes** - CRUD completo con creación de usuarios
 - **👨‍⚕️ Gestión de Doctores** - CRUD con especialidades y horarios
 - **📅 Sistema de Citas** - Agendamiento con validaciones automáticas
@@ -29,6 +30,8 @@ Sistema integral de gestión hospitalaria desarrollado con Node.js, Express y Vu
 - **📊 Panel de Recepcionista** - Hub centralizado para operaciones
 
 ### Validaciones Automáticas de Citas
+GET    /api/recepcion/doctores/:id/horario/:dia   # Ver horario por día (Lunes..Domingo)
+PUT    /api/recepcion/doctores/:id/horario        # Actualizar bloques de horario
 
 ✅ Mínimo 48 horas de anticipación  
 ✅ Máximo 3 meses adelantados  

@@ -500,6 +500,154 @@ class RecepcionService {
         }
     }
 
+    // ==================== HORARIO DOCTOR ====================
+
+    async obtenerHorarioDoctorPorDia(idDoctor, diaSemana) {
+        try {
+            const pool = await db.connect();
+            const result = await pool.request()
+                .input('Id_Doctor', db.sql.Int, idDoctor)
+                .input('DiaSemana', db.sql.VarChar, diaSemana)
+                .query(`
+                    SELECT 
+                        CONVERT(VARCHAR(8), H.Hora_Inicio, 108) AS Hora_Inicio,
+                        CONVERT(VARCHAR(8), H.Hora_Fin, 108) AS Hora_Fin
+                    FROM Doctores D
+                    JOIN Empleados E ON E.Id_Empleado = D.Id_Empleado
+                    JOIN Empleado_Horario EH ON EH.Id_Empleado = E.Id_Empleado
+                    JOIN Horario H ON H.Id_Horario = EH.Id_Horario
+                    WHERE D.Id_Doctor = @Id_Doctor AND H.Dia_Semana = @DiaSemana
+                    ORDER BY H.Hora_Inicio
+                `);
+            return result.recordset;
+        } catch (error) {
+            console.error('❌ Error al obtener horario doctor:', error);
+            throw new Error('Error al obtener horario');
+        }
+    }
+
+    async actualizarHorarioDoctor(idDoctor, diaSemana, bloques, usuarioRegistro = 'Recepcionista') {
+        const pool = await db.connect();
+        const transaction = new db.sql.Transaction(pool);
+        try {
+            await transaction.begin();
+            const req = new db.sql.Request(transaction);
+
+            // Obtener Id_Empleado
+            const info = await req
+                .input('Id_Doctor', db.sql.Int, idDoctor)
+                .query('SELECT Id_Empleado FROM Doctores WHERE Id_Doctor = @Id_Doctor');
+            if (info.recordset.length === 0) throw new Error('Doctor no encontrado');
+            const idEmpleado = info.recordset[0].Id_Empleado;
+
+            // Validación: asegurar que los nuevos bloques no afectan citas ya agendadas
+            // Traer citas futuras activas del doctor y filtrar por el día de semana indicado
+            const futuras = await req
+                .input('Id_Doctor', db.sql.Int, idDoctor)
+                .query(`
+                    SELECT 
+                        C.Id_Cita,
+                        C.Fecha_cita,
+                        CONVERT(VARCHAR(8), C.Hora_Inicio, 108) AS Hora_Inicio,
+                        CONVERT(VARCHAR(8), C.Hora_Fin, 108)   AS Hora_Fin
+                    FROM Citas C
+                    WHERE C.Id_Doc = @Id_Doctor
+                      AND C.Fecha_cita >= CAST(GETDATE() AS DATE)
+                      AND C.ID_Estatus IN (
+                        SELECT Id_Estatus FROM Estatus_Cita 
+                        WHERE Nombre IN ('Agendada - Pendiente de Pago', 'Pagada - Pendiente por Atender')
+                      )
+                `);
+
+            const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+            const pad = (s) => (s.length===5 ? s+':00' : s);
+            const dentroDeBloque = (ini, fin, blocks) => {
+                const i = pad(ini); const f = pad(fin);
+                return blocks.some(b => {
+                    const bi = pad(b.inicio); const bf = pad(b.fin);
+                    return (i >= bi && f <= bf);
+                });
+            };
+
+            const conflictos = [];
+            for (const c of futuras.recordset) {
+                const jsDate = new Date(c.Fecha_cita);
+                const dia = dias[jsDate.getDay()];
+                if (dia !== diaSemana) continue;
+                if (!dentroDeBloque(c.Hora_Inicio, c.Hora_Fin, bloques)) {
+                    conflictos.push({
+                        Id_Cita: c.Id_Cita,
+                        Fecha_cita: jsDate.toISOString().slice(0,10),
+                        Hora_Inicio: c.Hora_Inicio,
+                        Hora_Fin: c.Hora_Fin
+                    });
+                }
+            }
+
+            if (conflictos.length > 0) {
+                const detalle = conflictos.slice(0,5)
+                    .map(x => `#${x.Id_Cita} ${x.Fecha_cita} ${x.Hora_Inicio}-${x.Hora_Fin}`)
+                    .join(', ');
+                throw new Error(`Horario incompatible con citas existentes (${diaSemana}). Conflictos: ${detalle}${conflictos.length>5?` (+${conflictos.length-5} más)`:''}`);
+            }
+
+            // Obtener horarios actuales del día
+            const actuales = await req
+                .input('Id_Empleado', db.sql.Int, idEmpleado)
+                .input('Dia', db.sql.VarChar, diaSemana)
+                .query(`
+                    SELECT H.Id_Horario
+                    FROM Empleado_Horario EH
+                    JOIN Horario H ON H.Id_Horario = EH.Id_Horario
+                    WHERE EH.Id_Empleado = @Id_Empleado AND H.Dia_Semana = @Dia
+                `);
+
+            // Eliminar mapeos y horarios del día
+            for (const row of actuales.recordset) {
+                await req
+                    .input('Id_Horario', db.sql.Int, row.Id_Horario)
+                    .query('DELETE FROM Empleado_Horario WHERE Id_Empleado = @Id_Empleado AND Id_Horario = @Id_Horario');
+                await req
+                    .input('Id_Horario', db.sql.Int, row.Id_Horario)
+                    .query('DELETE FROM Horario WHERE Id_Horario = @Id_Horario');
+            }
+
+            // Insertar nuevos bloques y mapear
+            for (const b of bloques) {
+                const ins = await req
+                    .input('Dia', db.sql.VarChar, diaSemana)
+                    .input('Inicio', db.sql.VarChar, b.inicio)
+                    .input('Fin', db.sql.VarChar, b.fin)
+                    .query(`
+                        INSERT INTO Horario (Dia_Semana, Hora_Inicio, Hora_Fin)
+                        VALUES (@Dia, @Inicio, @Fin);
+                        SELECT SCOPE_IDENTITY() AS Id_Horario;
+                    `);
+                const idHor = ins.recordset[0].Id_Horario;
+                await req
+                    .input('Id_Horario', db.sql.Int, idHor)
+                    .query('INSERT INTO Empleado_Horario (Id_Empleado, Id_Horario) VALUES (@Id_Empleado, @Id_Horario)');
+            }
+
+            await transaction.commit();
+
+            // Bitácora
+            await pool.request()
+                .input('reg', db.sql.Int, idDoctor)
+                .input('usr', db.sql.VarChar, usuarioRegistro)
+                .input('det', db.sql.VarChar, `Horario actualizado para ${diaSemana} - Bloques: ${bloques.length}`)
+                .query(`
+                    INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                    VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Horario')
+                `);
+
+            return true;
+        } catch (error) {
+            await transaction.rollback();
+            console.error('❌ Error al actualizar horario doctor:', error);
+            throw error;
+        }
+    }
     // ==================== RECEPCIONISTAS ====================
 
     async listarRecepcionistas(filtros = {}) {

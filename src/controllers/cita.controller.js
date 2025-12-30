@@ -215,3 +215,74 @@ exports.getHorarioTrabajo = async (req, res) => {
     }
 };
 
+// POST /api/citas/:id/atender -> Doctor marca cita como atendida
+exports.atenderCita = async (req, res) => {
+    const idCita = parseInt(req.params.id, 10);
+    const userId = parseInt(req.headers['x-user-id'], 10);
+    const role = parseInt(req.headers['x-user-role'], 10);
+
+    if (isNaN(idCita)) {
+        return res.status(400).json({ message: 'ID de cita inválido' });
+    }
+    if (!userId || role !== 1) {
+        return res.status(403).json({ message: 'Acceso restringido a doctores' });
+    }
+
+    let pool;
+    try {
+        pool = await db.connect();
+        // Obtener Id_Doctor desde el usuario
+        const doctorRes = await pool.request()
+            .input('userId', db.sql.Int, userId)
+            .query(`
+                SELECT D.Id_Doctor
+                FROM Doctores D
+                INNER JOIN Empleados E ON D.Id_Empleado = E.Id_Empleado
+                WHERE E.Id_User = @userId
+            `);
+        if (doctorRes.recordset.length === 0) {
+            return res.status(404).json({ message: 'Doctor no encontrado' });
+        }
+        const doctorId = doctorRes.recordset[0].Id_Doctor;
+
+        // Validar propiedad de la cita y estatus pagado (2)
+        const citaRes = await pool.request()
+            .input('idCita', db.sql.Int, idCita)
+            .query(`
+                SELECT Id_Cita, Id_Doc, ID_Estatus
+                FROM Citas
+                WHERE Id_Cita = @idCita
+            `);
+        if (citaRes.recordset.length === 0) {
+            return res.status(404).json({ message: 'Cita no encontrada' });
+        }
+        const cita = citaRes.recordset[0];
+        if (cita.Id_Doc !== doctorId) {
+            return res.status(403).json({ message: 'La cita no pertenece al doctor autenticado' });
+        }
+        if (cita.ID_Estatus !== 2) {
+            return res.status(409).json({ message: 'Solo se pueden marcar como atendidas las citas pagadas' });
+        }
+
+        // Marcar como atendida (estatus 4)
+        await pool.request()
+            .input('idCita', db.sql.Int, idCita)
+            .query('UPDATE Citas SET ID_Estatus = 4 WHERE Id_Cita = @idCita');
+
+        // Bitácora
+        await pool.request()
+            .input('reg', db.sql.Int, idCita)
+            .input('usr', db.sql.VarChar, `Doctor_${userId}`)
+            .input('det', db.sql.VarChar, 'Cita marcada como atendida')
+            .query(`
+                INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Citas')
+            `);
+
+        return res.json({ success: true, message: 'Cita marcada como atendida' });
+    } catch (error) {
+        console.error('❌ Error POST /api/citas/:id/atender:', error);
+        return res.status(500).json({ message: 'Error al marcar cita como atendida', details: error.message });
+    }
+};
+

@@ -288,6 +288,80 @@ exports.darDeBajaDoctor = async (req, res) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// HORARIO DE DOCTOR
+// ═══════════════════════════════════════════════════════════════
+
+const DIAS_VALIDOS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+exports.obtenerHorarioDoctorDia = async (req, res) => {
+    try {
+        const idDoctor = parseInt(req.params.id, 10);
+        const dia = req.params.dia;
+        if (isNaN(idDoctor)) return res.status(400).json({ message: 'ID de doctor inválido' });
+        if (!DIAS_VALIDOS.includes(dia)) return res.status(400).json({ message: 'Día inválido' });
+
+        const rangos = await recepcionService.obtenerHorarioDoctorPorDia(idDoctor, dia);
+        return res.json({ success: true, total: rangos.length, rangos });
+    } catch (error) {
+        console.error('❌ Error GET /api/recepcion/doctores/:id/horario/:dia:', error);
+        return res.status(500).json({ message: 'Error al obtener horario', details: error.message });
+    }
+};
+
+exports.actualizarHorarioDoctorDia = async (req, res) => {
+    try {
+        const idDoctor = parseInt(req.params.id, 10);
+        const { diaSemana, bloques } = req.body;
+        const userId = req.headers['x-user-id'];
+
+        if (isNaN(idDoctor)) return res.status(400).json({ message: 'ID de doctor inválido' });
+        if (!DIAS_VALIDOS.includes(diaSemana)) return res.status(400).json({ message: 'Día inválido' });
+        if (!Array.isArray(bloques) || bloques.length === 0) {
+            return res.status(400).json({ message: 'Bloques requeridos' });
+        }
+
+        // Validar formato de hora y solapamientos simples
+        const horaRegex = /^\d{2}:\d{2}(:\d{2})?$/;
+        const norm = bloques.map(b => ({
+            inicio: (b.Hora_Inicio||'').substring(0,8),
+            fin: (b.Hora_Fin||'').substring(0,8)
+        }));
+        for (const b of norm) {
+            if (!horaRegex.test(b.inicio) || !horaRegex.test(b.fin)) {
+                return res.status(400).json({ message: 'Formato de hora inválido en bloques' });
+            }
+            if (b.inicio >= b.fin) {
+                return res.status(400).json({ message: 'Hora_Inicio debe ser menor a Hora_Fin' });
+            }
+        }
+        // Detectar solapamiento rápido
+        const sorted = [...norm].sort((a,b)=> a.inicio.localeCompare(b.inicio));
+        for (let i=1;i<sorted.length;i++) {
+            if (sorted[i].inicio < sorted[i-1].fin) {
+                return res.status(400).json({ message: 'Bloques solapados' });
+            }
+        }
+
+        await recepcionService.actualizarHorarioDoctor(idDoctor, diaSemana, norm, `Recepcionista_${userId}`);
+
+        const rangos = await recepcionService.obtenerHorarioDoctorPorDia(idDoctor, diaSemana);
+        return res.json({ success: true, message: 'Horario actualizado', diaSemana, rangos });
+    } catch (error) {
+        console.error('❌ Error PUT /api/recepcion/doctores/:id/horario:', error);
+        let status = 500;
+        if (error.message) {
+            if (error.message.toLowerCase().includes('inválido') ||
+                error.message.toLowerCase().includes('bloques') ||
+                error.message.toLowerCase().includes('incompatible')) {
+                status = 400;
+            } else if (error.message.toLowerCase().includes('no encontrado')) {
+                status = 404;
+            }
+        }
+        return res.status(status).json({ message: error.message });
+    }
+};
+// ═══════════════════════════════════════════════════════════════
 // GESTIÓN DE RECEPCIONISTAS
 // ═══════════════════════════════════════════════════════════════
 

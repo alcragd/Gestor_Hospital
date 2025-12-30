@@ -210,4 +210,7 @@ router.get('/doctores/:id_especialidad', citaController.getDoctoresPorEspecialid
 router.post('/disponibilidad', citaController.getSlotsOcupados); 
 router.post('/horario-trabajo', citaController.getHorarioTrabajo);
 
+// Marcar cita como atendida (doctor)
+router.post('/:id/atender', citaController.atenderCita);
+
 module.exports = router;

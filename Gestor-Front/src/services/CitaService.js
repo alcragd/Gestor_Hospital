@@ -127,6 +127,24 @@ class CitaService {
         return response.json();
     }
 
+    // Doctor marca cita como atendida
+    async atenderCita(idCita){
+        const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('idUser');
+        const response = await fetch(`${API_URL}/${idCita}/atender`, {
+            method: 'POST',
+            headers: {
+                'x-user-role': userRole,
+                'x-user-id': userId
+            }
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Error al marcar cita atendida');
+        }
+        return response.json();
+    }
+
 }
 
 export default new CitaService();

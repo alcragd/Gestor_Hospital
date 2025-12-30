@@ -59,6 +59,7 @@
               <td>
                 <button class="btn-view" @click="verDetalles(doctor)">Ver</button>
                 <button class="btn-edit" @click="editarDoctor(doctor)" :disabled="doctor.Activo === false || doctor.Activo === 0">Editar</button>
+                <button class="btn-view" @click="verHorario(doctor)" :disabled="doctor.Activo === false || doctor.Activo === 0">Horario</button>
                 <button class="btn-danger" @click="darDeBaja(doctor)" :disabled="doctor.Activo === false || doctor.Activo === 0">Dar de baja</button>
               </td>
             </tr>
@@ -159,6 +160,75 @@
               </button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <!-- Modal de horario -->
+      <div v-if="doctorHorario" class="modal">
+        <div class="modal-content modal-large">
+          <span class="close" @click="cerrarHorario">&times;</span>
+          <h3>Horario de {{ doctorHorario.Nombre }} {{ doctorHorario.Paterno }}</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Día</label>
+              <input type="date" v-model="horarioFecha" @change="onCambioFecha">
+            </div>
+            <div class="form-group">
+              <label>Editar Día de Semana</label>
+              <select v-model="horarioDiaSemana" @change="cargarHorarioPorDia">
+                <option>Lunes</option>
+                <option>Martes</option>
+                <option>Miércoles</option>
+                <option>Jueves</option>
+                <option>Viernes</option>
+                <option>Sábado</option>
+                <option>Domingo</option>
+              </select>
+            </div>
+          </div>
+          <div v-if="horarioLoading" class="loading">Cargando horario...</div>
+          <div v-else>
+            <div v-if="horarioRangos.length === 0" class="no-data">Sin horario para el día seleccionado.</div>
+            <div v-else class="tabla-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(r, idx) in horarioRangos" :key="idx">
+                    <td>{{ r.Hora_Inicio }}</td>
+                    <td>{{ r.Hora_Fin }}</td>
+                    <td><button class="btn-danger" @click="eliminarBloque(idx)">Eliminar</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="form-row" style="margin-top:10px;">
+            <div class="form-group">
+              <label>Nuevo bloque - Inicio</label>
+              <input type="time" v-model="bloqueNuevo.inicio">
+            </div>
+            <div class="form-group">
+              <label>Nuevo bloque - Fin</label>
+              <input type="time" v-model="bloqueNuevo.fin">
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end;">
+              <button class="btn-primary" @click="agregarBloque">Agregar bloque</button>
+            </div>
+          </div>
+          <div v-if="horarioMensaje" class="success">{{ horarioMensaje }}</div>
+          <div v-if="horarioError" class="error">{{ horarioError }}</div>
+          <div class="modal-actions">
+            <button class="btn-secondary" @click="cerrarHorario">Cerrar</button>
+            <button class="btn-primary" :disabled="horarioGuardando || horarioRangos.length===0" @click="guardarHorario">
+              {{ horarioGuardando ? 'Guardando...' : 'Guardar Horario' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -277,6 +347,7 @@
 
 <script>
 import RecepcionService from '../../services/RecepcionService';
+import CitaService from '../../services/CitaService';
 
 export default {
   name: 'GestionDoctores',
@@ -321,7 +392,16 @@ export default {
         Telefono_emergencia: '',
         Sueldo: '',
         Id_Especialidad: ''
-      }
+      },
+      doctorHorario: null,
+      horarioFecha: new Date().toISOString().slice(0,10),
+      horarioRangos: [],
+      horarioLoading: false,
+      horarioDiaSemana: 'Lunes',
+      bloqueNuevo: { inicio: '', fin: '' },
+      horarioGuardando: false,
+      horarioMensaje: '',
+      horarioError: ''
     };
   },
   mounted() {
@@ -381,6 +461,77 @@ export default {
         this.mensajeError = 'Error al dar de baja: ' + error.message;
       } finally {
         this.bajando = false;
+      }
+    },
+    verHorario(doctor){
+      this.doctorHorario = doctor;
+      this.horarioRangos = [];
+      this.horarioLoading = false;
+      this.$nextTick(() => this.onCambioFecha());
+    },
+    cerrarHorario(){
+      this.doctorHorario = null;
+      this.horarioRangos = [];
+    },
+    onCambioFecha(){
+      // Derivar día de semana en español a partir de la fecha
+      if (!this.horarioFecha) return;
+      const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+      const d = new Date(this.horarioFecha);
+      this.horarioDiaSemana = dias[d.getDay()] || 'Lunes';
+      this.cargarHorarioPorDia();
+    },
+    async cargarHorarioPorDia(){
+      if (!this.doctorHorario || !this.horarioDiaSemana) return;
+      this.horarioLoading = true;
+      this.horarioMensaje = '';
+      this.horarioError = '';
+      try{
+        const res = await RecepcionService.obtenerHorarioDoctorDia(this.doctorHorario.Id_Doctor, this.horarioDiaSemana);
+        const rangos = (res && res.rangos) ? res.rangos : (Array.isArray(res) ? res : []);
+        // Normalizar a {Hora_Inicio, Hora_Fin}
+        this.horarioRangos = rangos.map(r => ({
+          Hora_Inicio: r.Hora_Inicio || r.inicio || r.Hora_Inicio,
+          Hora_Fin: r.Hora_Fin || r.fin || r.Hora_Fin
+        }));
+      }catch(e){
+        this.horarioRangos = [];
+        this.horarioError = 'No se pudo cargar el horario: ' + e.message;
+      }finally{
+        this.horarioLoading = false;
+      }
+    },
+    agregarBloque(){
+      this.horarioError = '';
+      this.horarioMensaje = '';
+      const ini = this.bloqueNuevo.inicio;
+      const fin = this.bloqueNuevo.fin;
+      if (!ini || !fin) { this.horarioError = 'Completa inicio y fin.'; return; }
+      if (ini >= fin) { this.horarioError = 'El inicio debe ser menor al fin.'; return; }
+      // Validar solapamiento con existentes
+      const solapa = this.horarioRangos.some(r => !(fin <= r.Hora_Inicio || ini >= r.Hora_Fin));
+      if (solapa) { this.horarioError = 'El bloque se solapa con otro.'; return; }
+      this.horarioRangos.push({ Hora_Inicio: ini, Hora_Fin: fin });
+      this.bloqueNuevo = { inicio: '', fin: '' };
+      this.horarioMensaje = 'Bloque agregado.';
+    },
+    eliminarBloque(idx){
+      this.horarioRangos.splice(idx, 1);
+    },
+    async guardarHorario(){
+      if (!this.doctorHorario) return;
+      this.horarioGuardando = true;
+      this.horarioMensaje = '';
+      this.horarioError = '';
+      try{
+        const bloques = this.horarioRangos.map(r => ({ inicio: r.Hora_Inicio, fin: r.Hora_Fin }));
+        const res = await RecepcionService.actualizarHorarioDoctor(this.doctorHorario.Id_Doctor, this.horarioDiaSemana, bloques);
+        this.horarioMensaje = (res && res.message) ? res.message : 'Horario actualizado';
+        await this.cargarHorarioPorDia();
+      }catch(e){
+        this.horarioError = e.message;
+      }finally{
+        this.horarioGuardando = false;
       }
     },
     cerrarEdicion() {

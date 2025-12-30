@@ -26,6 +26,7 @@
           <th>Paciente</th>
           <th>Consultorio</th>
           <th>Estatus</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -36,6 +37,12 @@
           <td>{{ c.Paciente }}</td>
           <td>{{ c.Consultorio }} ({{ c.Ubicacion_Consultorio }})</td>
           <td>{{ c.Estatus }}</td>
+          <td>
+            <button class="btn btn-sm btn-success" 
+                    v-if="puedeMarcarAtendida(c)" 
+                    @click="marcarAtendida(c)"
+            >Marcar atendida</button>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -73,6 +80,20 @@ export default {
         const res = await CitaService.misCitasDoctor(this.filtros);
         this.citas = Array.isArray(res?.citas) ? res.citas : [];
         if (this.citas.length===0) this.mensaje='Sin citas para los filtros aplicados.';
+      }catch(e){
+        this.mensaje = e.message; this.isError=true;
+      }
+    },
+    puedeMarcarAtendida(c){
+      const e = (c.Estatus||'').toLowerCase();
+      return e.includes('pagada');
+    },
+    async marcarAtendida(c){
+      this.mensaje=''; this.isError=false;
+      try{
+        await CitaService.atenderCita(c.Id_Cita);
+        this.mensaje = `Cita ${c.Id_Cita} marcada como atendida.`;
+        await this.cargarMisCitas();
       }catch(e){
         this.mensaje = e.message; this.isError=true;
       }

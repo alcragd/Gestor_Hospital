@@ -65,6 +65,16 @@ router.put('/doctores/:id', recepcionController.actualizarDoctor);
 router.post('/doctores/:id/baja', recepcionController.darDeBajaDoctor);
 
 // ═══════════════════════════════════════════════════════════════
+// HORARIO DE DOCTOR (VISUALIZACIÓN + ACTUALIZACIÓN)
+// ═══════════════════════════════════════════════════════════════
+
+// Ver horario por día (dia en Español: Lunes..Domingo)
+router.get('/doctores/:id/horario/:dia', recepcionController.obtenerHorarioDoctorDia);
+
+// Actualizar bloques de horario para un día
+router.put('/doctores/:id/horario', recepcionController.actualizarHorarioDoctorDia);
+
+// ═══════════════════════════════════════════════════════════════
 // RUTAS - GESTIÓN DE RECEPCIONISTAS
 // ═══════════════════════════════════════════════════════════════
 

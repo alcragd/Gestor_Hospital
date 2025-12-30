@@ -2,7 +2,7 @@
     <div>
         <!-- BOTÓN ABRIR -->
         <button class="sidebar-toggle" @click="toggle">
-        ☰
+        MENU
         </button>
 
         <!-- PANEL -->

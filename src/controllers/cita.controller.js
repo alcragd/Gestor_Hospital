@@ -264,10 +264,10 @@ exports.atenderCita = async (req, res) => {
             return res.status(409).json({ message: 'Solo se pueden marcar como atendidas las citas pagadas' });
         }
 
-        // Marcar como atendida (estatus 4)
+        // Marcar como atendida (estatus 6)
         await pool.request()
             .input('idCita', db.sql.Int, idCita)
-            .query('UPDATE Citas SET ID_Estatus = 4 WHERE Id_Cita = @idCita');
+            .query('UPDATE Citas SET ID_Estatus = 6 WHERE Id_Cita = @idCita');
 
         // Bitácora
         await pool.request()

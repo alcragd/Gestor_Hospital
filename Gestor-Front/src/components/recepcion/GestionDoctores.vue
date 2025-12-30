@@ -258,11 +258,11 @@
           </div>
           <div class="form-group">
             <label>Fecha Nacimiento *</label>
-            <input v-model="formNuevo.Fecha_nac" type="date" required>
+            <input v-model="formNuevo.Fecha_nac" type="date" required @change="calcularEdadNuevo">
           </div>
           <div class="form-group">
-            <label>Edad *</label>
-            <input v-model="formNuevo.Edad" type="number" required>
+            <label>Edad</label>
+            <input v-model="formNuevo.Edad" type="number" readonly>
           </div>
         </div>
 
@@ -408,6 +408,17 @@ export default {
     this.cargarDoctores();
   },
   methods: {
+    calcularEdadNuevo() {
+      if (!this.formNuevo.Fecha_nac) return;
+      const birthDate = new Date(this.formNuevo.Fecha_nac);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      this.formNuevo.Edad = age;
+    },
     async cargarDoctores() {
       this.loading = true;
       try {

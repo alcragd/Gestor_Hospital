@@ -72,22 +72,22 @@ window.login = async function () {
         }
 
         const data = await res.json();
-        console.log("✅ Respuesta del servidor:", data);
+        console.log("Respuesta del servidor:", data);
 
         if (!data.success) {
             mostrarMensaje(data.message || "Usuario o contraseña incorrectos");
             return;
         }
 
-        console.log("✅ Datos del login:", data);
+        console.log("Datos del login:", data);
 
         // Guardar datos en localStorage
         localStorage.setItem("userId", data.userId);       // ID específico (Paciente, Doctor, etc.)
         localStorage.setItem("idUser", data.id);          // Id_User de la tabla Usuarios
-        localStorage.setItem("userRole", data.tipo);      // ⭐ GUARDADO COMO userRole para Vue
+        localStorage.setItem("userRole", data.tipo);      // GUARDADO COMO userRole para Vue
         localStorage.setItem("tipo", data.tipo);          // ID_Tipo_User (1,2,3,4)
         localStorage.setItem("nombre", data.nombre);
-        localStorage.setItem("username", data.nombre);    // ⭐ AGREGADO username para el panel
+        localStorage.setItem("username", data.nombre);    // AGREGADO username para el panel
         localStorage.setItem("paterno", data.paterno || "");
         localStorage.setItem("materno", data.materno || "");
         localStorage.setItem("correo", data.correo);
@@ -101,18 +101,18 @@ window.login = async function () {
             localStorage.setItem("emergencia", data.emergencia);
         }
 
-        console.log("✅ LocalStorage guardado:", {
+        console.log("LocalStorage guardado:", {
             userId: localStorage.getItem("userId"),
             tipo: localStorage.getItem("tipo"),
             nombre: localStorage.getItem("nombre")
         });
 
-        // ⭐ REDIRECCIÓN SEGÚN TIPO DE USUARIO - SIMPLIFICADA
+        // REDIRECCIÓN SEGÚN TIPO DE USUARIO - SIMPLIFICADA
         const tipo = parseInt(data.tipo);
-        console.log("🔀 Tipo de usuario:", tipo);
+        console.log("Tipo de usuario:", tipo);
         
         // Primero, prueba una redirección simple
-        console.log("🔄 Redirigiendo a página de paciente...");
+        console.log("Redirigiendo a página de paciente...");
         
         // Opción 1: Redirigir siempre a paciente (para probar)
     window.location.href = "/paciente.html";
@@ -139,7 +139,7 @@ window.login = async function () {
         
 
     } catch (error) {
-        console.error("❌ Error completo en login:", error);
+        console.error("Error completo en login:", error);
         
         if (error.name === 'AbortError') {
             mostrarMensaje("Timeout: El servidor no respondió");

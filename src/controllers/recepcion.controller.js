@@ -64,11 +64,23 @@ exports.crearPaciente = async (req, res) => {
             UsuarioRegistro: `Recepcionista_${userId}`
         };
         
+        // Calcular edad automáticamente desde Fecha_nac
+        if (datos.Fecha_nac) {
+            const birthDate = new Date(datos.Fecha_nac);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            datos.Edad = age;
+        }
+        
         // Validaciones básicas
-        if (!datos.Nombre || !datos.Paterno || !datos.Fecha_nac || !datos.DNI || !datos.Correo || !datos.Telefono_cel || !datos.Sexo || datos.Edad === undefined) {
+        if (!datos.Nombre || !datos.Paterno || !datos.Fecha_nac || !datos.DNI || !datos.Correo || !datos.Telefono_cel || !datos.Sexo) {
             return res.status(400).json({
                 message: 'Faltan campos obligatorios',
-                required: ['Nombre', 'Paterno', 'Fecha_nac', 'DNI', 'Correo', 'Telefono_cel', 'Sexo', 'Edad']
+                required: ['Nombre', 'Paterno', 'Fecha_nac', 'DNI', 'Correo', 'Telefono_cel', 'Sexo']
             });
         }
         
@@ -194,8 +206,20 @@ exports.crearDoctor = async (req, res) => {
             UsuarioRegistro: `Recepcionista_${userId}`
         };
         
+        // Calcular edad automáticamente desde Fecha_nac
+        if (datos.Fecha_nac) {
+            const birthDate = new Date(datos.Fecha_nac);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            datos.Edad = age;
+        }
+        
         // Validaciones básicas
-        const camposObligatorios = ['Nombre', 'Paterno', 'CURP', 'Fecha_nac', 'Correo', 'Telefono_cel', 'Sexo', 'Edad', 'Sueldo', 'Id_Especialidad', 'Cedula', 'Rfc'];
+        const camposObligatorios = ['Nombre', 'Paterno', 'CURP', 'Fecha_nac', 'Correo', 'Telefono_cel', 'Sexo', 'Sueldo', 'Id_Especialidad', 'Cedula', 'Rfc'];
         const faltantes = camposObligatorios.filter(campo => datos[campo] === undefined || datos[campo] === null || datos[campo] === '');
         
         if (faltantes.length > 0) {
@@ -420,8 +444,20 @@ exports.crearRecepcionista = async (req, res) => {
             UsuarioRegistro: `Recepcionista_${userId}`
         };
         
+        // Calcular edad automáticamente desde Fecha_nac
+        if (datos.Fecha_nac) {
+            const birthDate = new Date(datos.Fecha_nac);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            datos.Edad = age;
+        }
+        
         // Validaciones básicas
-        const camposObligatorios = ['Nombre', 'Paterno', 'CURP', 'Fecha_nac', 'Correo', 'Telefono_cel', 'Sexo', 'Edad', 'Sueldo', 'Username', 'Password'];
+        const camposObligatorios = ['Nombre', 'Paterno', 'CURP', 'Fecha_nac', 'Correo', 'Telefono_cel', 'Sexo', 'Sueldo', 'Username', 'Password'];
         const faltantes = camposObligatorios.filter(campo => datos[campo] === undefined || datos[campo] === null || datos[campo] === '');
         
         if (faltantes.length > 0) {

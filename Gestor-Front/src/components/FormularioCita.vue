@@ -26,23 +26,23 @@
       <li v-for="c in citas" :key="c.Folio_Cita" class="mb-3 pb-2 border-bottom">
         <!-- Fecha -->
         <div>
-          <strong v-if="c.Fecha_Cita">📅 {{ c.Fecha_Cita }}</strong>
+          <strong v-if="c.Fecha_Cita">{{ c.Fecha_Cita }}</strong>
           <span v-else class="text-muted">Sin fecha</span>
         </div>
         
         <!-- Hora -->
         <div v-if="c.Hora_Inicio" class="text-muted small">
-          🕐 {{ c.Hora_Inicio }}<span v-if="c.Hora_Fin"> - {{ c.Hora_Fin }}</span>
+          {{ c.Hora_Inicio }}<span v-if="c.Hora_Fin"> - {{ c.Hora_Fin }}</span>
         </div>
         
         <!-- Doctor -->
         <div class="text-muted small">
-          👨‍⚕️ Dr. {{ c.Nombre_Doctor || 'No asignado' }}
+          Dr. {{ c.Nombre_Doctor || 'No asignado' }}
         </div>
         
         <!-- Especialidad -->
         <div class="text-primary small fw-semibold">
-          🏥 {{ c.Especialidad || 'Sin especialidad' }}
+          {{ c.Especialidad || 'Sin especialidad' }}
         </div>
       </li>
     </ul>
@@ -52,7 +52,7 @@
 
 <!-- BOTÓN PARA ABRIR EL PANEL -->
 <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen">
-  ☰
+  MENU
 </button>
 
   <div class="form-wrapper">
@@ -164,8 +164,8 @@
 
       <div class="card-footer text-muted small">
         <div class="d-flex justify-content-between">
-          <div>Usuario: {{ cita.Usuario }}</div>
-          <div>Paciente ID: {{ cita.Id_Paciente || 'N/D' }}</div>
+          <div>Usuario: {{ currentUserName || cita.Usuario }}</div>
+          <div>Paciente ID: {{ currentPatientId || cita.Id_Paciente || 'N/D' }}</div>
         </div>
       </div>
     </div>
@@ -206,6 +206,9 @@ export default {
       mensaje: '',
       isSuccess: false,
       sidebarOpen: false,
+
+      currentUserName: '',
+      currentPatientId: '',
 
       user: {
         nombre: "",
@@ -383,7 +386,7 @@ export default {
     },
     // Agrega este método en la sección de methods:
 seleccionarSlot(slot) {
-    console.log("🎯 seleccionarSlot ejecutado");
+    console.log("seleccionarSlot ejecutado");
     console.log("  Slot:", slot);
     console.log("  selected.doctorId:", this.selected.doctorId);
     
@@ -391,7 +394,7 @@ seleccionarSlot(slot) {
     console.log("  userId desde localStorage:", userId);
     
     if (!userId) {
-        console.error("❌ No hay userId para agendar cita");
+        console.error("No hay userId para agendar cita");
         this.mensaje = "Error: No estás autenticado";
         return;
     }
@@ -401,7 +404,7 @@ seleccionarSlot(slot) {
     console.log("  pacienteId (convertido a número):", pacienteId);
     
     if (isNaN(pacienteId)) {
-        console.error("❌ userId no es un número válido:", userId);
+        console.error("userId no es un número válido:", userId);
         this.mensaje = "Error: ID de paciente inválido";
         return;
     }
@@ -413,14 +416,14 @@ seleccionarSlot(slot) {
     this.cita.Hora_Inicio = slot.inicio;
     this.cita.Hora_Fin = slot.fin;
     
-    console.log("✅ Cita configurada:");
+    console.log("Cita configurada:");
     console.log("  - Doctor ID:", this.cita.Id_Doctor);
     console.log("  - Paciente ID:", this.cita.Id_Paciente);
     console.log("  - Fecha:", this.cita.Fecha_Cita);
     console.log("  - Hora Inicio:", this.cita.Hora_Inicio);
     console.log("  - Hora Fin:", this.cita.Hora_Fin);
     
-    this.mensaje = `✅ Horario ${slot.inicio.substring(0,5)} seleccionado. Presiona "Confirmar Cita".`;
+    this.mensaje = `Horario ${slot.inicio.substring(0,5)} seleccionado. Presiona "Confirmar Cita".`;
 },
 
     async submitCita() {
@@ -486,7 +489,7 @@ seleccionarSlot(slot) {
   const pacienteId = localStorage.getItem("userId");
   
   this.cita.Id_Doctor = this.selected.doctorId;
-  this.cita.Id_Paciente = parseInt(pacienteId, 10); // ⭐ Convertir a número
+  this.cita.Id_Paciente = parseInt(pacienteId, 10); // Convertir a número
   this.cita.Fecha_Cita = this.selected.fecha;
   this.cita.Hora_Inicio = slot.inicio.substring(0, 8); 
   this.cita.Hora_Fin = slot.fin.substring(0, 8);       
@@ -498,27 +501,30 @@ seleccionarSlot(slot) {
       this.cita.Id_Doctor = null;
       this.cita.Hora_Inicio = '';
       this.cita.Hora_Fin = '';
+      if (this.currentPatientId) {
+        this.cita.Id_Paciente = parseInt(this.currentPatientId, 10);
+      }
     },
 
 // En FormularioCita.vue - MÉTODO cargarUsuario CORREGIDO
 cargarUsuario() {
-    console.log("🔍 EJECUTANDO cargarUsuario()");
+    console.log("EJECUTANDO cargarUsuario()");
     
-    // ⭐ OBTENER userId (este es el ID_Paciente desde login)
+    // OBTENER userId (este es el ID_Paciente desde login)
     const userId = localStorage.getItem("userId");
     const nombre = localStorage.getItem("nombre");
     const paterno = localStorage.getItem("paterno");
     const correo = localStorage.getItem("correo");
     const telefono = localStorage.getItem("telefono");
 
-    console.log("📊 Datos obtenidos de localStorage:");
+    console.log("Datos obtenidos de localStorage:");
     console.log("  - userId:", userId, "(tipo:", typeof userId, ")");
     console.log("  - nombre:", nombre);
     console.log("  - paterno:", paterno);
     
-    // ⭐⭐ VERIFICACIÓN SIMPLIFICADA - SOLO userId ⭐⭐
+    // VERIFICACIÓN SIMPLIFICADA - SOLO userId
     if (!userId) {
-        console.error("❌ CRÍTICO: No se encontró 'userId' en localStorage");
+        console.error("CRÍTICO: No se encontró 'userId' en localStorage");
         console.error("  localStorage contiene:");
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -526,22 +532,27 @@ cargarUsuario() {
         }
         
         // Mostrar mensaje en la UI
-        this.mensaje = "❌ Error: No estás autenticado. Serás redirigido al login...";
+        this.mensaje = "Error: No estás autenticado. Serás redirigido al login...";
         this.isSuccess = false;
         
         // Redirigir después de 5 segundos (para debugging)
                     window.location.href = "/login.html";
 
         setTimeout(() => {
-            console.log("🔄 Redirigiendo a login.html...");
+            console.log("Redirigiendo a login.html...");
             window.location.href = "/login.html";
         }, 5000);
         
         return;
     }
     
-    console.log("✅ Usuario autenticado correctamente");
-    console.log("✅ userId encontrado:", userId);
+    console.log("Usuario autenticado correctamente");
+    console.log("userId encontrado:", userId);
+
+    this.currentPatientId = userId;
+    this.currentUserName = localStorage.getItem('username') || 'Usuario';
+    this.cita.Usuario = this.currentUserName;
+    this.cita.Id_Paciente = parseInt(userId, 10);
 
     // Cargar datos del usuario para mostrar en sidebar
     this.user = { 
@@ -550,29 +561,29 @@ cargarUsuario() {
         telefono: telefono || "Sin teléfono" 
     };
     
-    console.log("✅ Datos del sidebar cargados:", this.user);
+    console.log("Datos del sidebar cargados:", this.user);
 },
 
     async cargarCitas() {
       try {
         const userId = localStorage.getItem("userId");
         
-        // ⭐ Validación
+        // Validación
         if (!userId) {
           console.warn("No hay userId en localStorage");
           this.citas = [];
           return;
         }
         
-        console.log("🔍 Cargando citas para paciente ID:", userId);
+        console.log("Cargando citas para paciente ID:", userId);
         
         const citasRaw = await CitaService.getCitasPaciente(userId);
         
-        console.log("📥 RAW CITAS:", citasRaw);
+        console.log("RAW CITAS:", citasRaw);
         if (citasRaw.length > 0) {
-      console.log("📋 PRIMERA CITA:", citasRaw[0]);
-      console.log("🆔 ID_Paciente de primera cita:", citasRaw[0].ID_Paciente);
-      console.log("🆔 userId del localStorage:", userId);
+      console.log("PRIMERA CITA:", citasRaw[0]);
+      console.log("ID_Paciente de primera cita:", citasRaw[0].ID_Paciente);
+      console.log("userId del localStorage:", userId);
       console.log("🔍 ¿Coinciden?", citasRaw[0].ID_Paciente == userId);
     }
 
@@ -620,21 +631,21 @@ cargarUsuario() {
           }
         };
 
-        // ⭐ Filtrar solo citas del usuario actual
+        // Filtrar solo citas del usuario actual
     const activos = [1, 2, 'Agendada - Pendiente de Pago', 'Pagada - Pendiente por Atender', 'Programada', 'Pagada'];
 
     this.citas = citasRaw
       .filter(c => {
         const coincide = c.ID_Paciente == userId;
         if (!coincide) {
-          console.warn(`⚠️ Cita ${c.Folio_Cita} filtrada: ID_Paciente=${c.ID_Paciente} vs userId=${userId}`);
+          console.warn(`Cita ${c.Folio_Cita} filtrada: ID_Paciente=${c.ID_Paciente} vs userId=${userId}`);
           return false;
         }
 
         const est = c.Id_Estatus || c.Estatus;
         const keep = activos.includes(est);
         if (!keep) {
-          console.info(`ℹ️ Ocultando cita ${c.Folio_Cita || c.Id_Cita} por estatus ${est}`);
+          console.info(`Ocultando cita ${c.Folio_Cita || c.Id_Cita} por estatus ${est}`);
         }
         return keep;
       })
@@ -645,13 +656,13 @@ cargarUsuario() {
         Hora_Fin: formatHora(c.Hora_Fin),
       }));
 
-    console.log(`✅ Total de citas después del filtro: ${this.citas.length}`);
+    console.log(`Total de citas después del filtro: ${this.citas.length}`);
     if (this.citas.length > 0) {
-      console.log("📋 Primera cita procesada:", this.citas[0]);
+      console.log("Primera cita procesada:", this.citas[0]);
     }
 
   } catch (error) {
-    console.error("❌ Error cargando citas:", error);
+    console.error("Error cargando citas:", error);
     this.citas = [];
   }
   }

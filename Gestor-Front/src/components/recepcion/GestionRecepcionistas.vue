@@ -49,11 +49,11 @@
             </div>
             <div class="form-group">
               <label>Fecha de Nacimiento *</label>
-              <input v-model="formulario.Fecha_nac" type="date" required>
+              <input v-model="formulario.Fecha_nac" type="date" required @change="calcularEdad">
             </div>
             <div class="form-group">
-              <label>Edad *</label>
-              <input v-model.number="formulario.Edad" type="number" min="18" required>
+              <label>Edad</label>
+              <input v-model.number="formulario.Edad" type="number" readonly>
             </div>
           </div>
 
@@ -120,7 +120,7 @@
           </div>
 
           <div v-if="formulario.Password !== formulario.PasswordConfirm" class="warning">
-            ⚠️ Las contraseñas no coinciden
+            Las contraseñas no coinciden
           </div>
         </fieldset>
 
@@ -307,6 +307,17 @@ export default {
     };
   },
   methods: {
+    calcularEdad() {
+      if (!this.formulario.Fecha_nac) return;
+      const birthDate = new Date(this.formulario.Fecha_nac);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      this.formulario.Edad = age;
+    },
     verDetalles(rec) {
       this.recSeleccionado = rec;
     },

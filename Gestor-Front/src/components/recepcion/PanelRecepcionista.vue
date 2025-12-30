@@ -40,7 +40,7 @@
 
   <!-- BOTÓN PARA ABRIR SIDEBAR -->
   <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen">
-    ☰
+    MENU
   </button>
 
   <div class="form-wrapper">

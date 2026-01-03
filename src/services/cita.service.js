@@ -14,6 +14,9 @@ class CitaService {
             if (!fechaRegex.test(Fecha_Cita)) throw new Error('Formato de fecha inválido. Debe ser YYYY-MM-DD');
             if (!horaRegex.test(Hora_Inicio) || !horaRegex.test(Hora_Fin)) throw new Error('Formato de hora inválido. Debe ser HH:MM o HH:MM:SS');
 
+            // Set language to Spanish for the entire SP execution
+            await pool.request().query('SET LANGUAGE Spanish');
+
             // Llamar al SP CrearCita
             const request = pool.request()
                 .input('Id_Doctor', db.sql.Int, Id_Doctor)

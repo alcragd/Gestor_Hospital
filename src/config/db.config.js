@@ -8,7 +8,8 @@ const config = {
     database: 'GestorHospitalDB', 
     options: {
         encrypt: false, 
-        trustServerCertificate: true 
+        trustServerCertificate: true,
+        language: 'Spanish'
     }
 };
 

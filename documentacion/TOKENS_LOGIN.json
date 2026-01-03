@@ -1,0 +1,39 @@
+﻿{
+    "recep":  {
+                  "success":  true,
+                  "id":  22,
+                  "userId":  22,
+                  "tipo":  3,
+                  "nombre":  "Laura",
+                  "paterno":  "Díaz",
+                  "materno":  "Luna",
+                  "correo":  "laura@recepcion.com",
+                  "telefono":  "5511110006",
+                  "activo":  true
+              },
+    "paciente":  {
+                     "success":  true,
+                     "id":  28,
+                     "userId":  6,
+                     "tipo":  4,
+                     "nombre":  "Camila",
+                     "paterno":  "Vargas",
+                     "materno":  "Reyes",
+                     "correo":  "camila@pac.com",
+                     "telefono":  "552206",
+                     "emergencia":  "552296"
+                 },
+    "doctor":  {
+                   "success":  true,
+                   "id":  1,
+                   "userId":  1,
+                   "tipo":  1,
+                   "nombre":  "Roberto",
+                   "paterno":  "Bravo",
+                   "materno":  "Sosa",
+                   "correo":  "c1a@hos.com",
+                   "telefono":  "5588776655",
+                   "especialidad":  "Cardiología",
+                   "activo":  true
+               }
+}

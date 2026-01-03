@@ -55,6 +55,7 @@
         <GestionCitas v-if="currentView === 'citas'" />
         <VentasUnificadas v-if="currentView === 'ventas'" />
         <GestionRecepcionistas v-if="currentView === 'recepcionistas'" />
+        <BitacorasSistema v-if="currentView === 'bitacoras'" />
       </div>
     </div>
   </div>
@@ -66,6 +67,7 @@ import GestionDoctores from './GestionDoctores.vue';
 import GestionCitas from './GestionCitas.vue';
 import VentasUnificadas from './VentasUnificadas.vue';
 import GestionRecepcionistas from './GestionRecepcionistas.vue';
+import BitacorasSistema from './BitacorasSistema.vue';
 
 export default {
   name: 'PanelRecepcionista',
@@ -74,6 +76,7 @@ export default {
     GestionDoctores,
     GestionCitas,
     VentasUnificadas,
+    BitacorasSistema,
     GestionRecepcionistas
   },
   data() {
@@ -87,6 +90,7 @@ export default {
         { id: 'doctores', label: 'Doctores' },
         { id: 'citas', label: 'Citas' },
         { id: 'ventas', label: 'Ventas' },
+        { id: 'bitacoras', label: 'Bitácoras' },
         { id: 'recepcionistas', label: 'Recepcionistas' }
       ]
     };

@@ -1,0 +1,114 @@
+﻿{
+    "resumen":  {
+                    "success":  true,
+                    "total":  2,
+                    "registros":  [
+                                      {
+                                          "Id_Bitacora":  3,
+                                          "Id_Cita":  37,
+                                          "Fecha_cita":  "2026-01-01T00:00:00.000Z",
+                                          "Hora_Inicio":  "1970-01-01T15:00:00.000Z",
+                                          "Hora_Fin":  "1970-01-01T16:00:00.000Z",
+                                          "Id_Paciente":  4,
+                                          "Paciente":  "Elena Torres Paz",
+                                          "Id_Doctor":  2,
+                                          "Doctor":  "Ana Gómez",
+                                          "Especialidad":  "Cardiología",
+                                          "Estatus_Anterior":  1,
+                                          "Nombre_Estatus_Anterior":  "Agendada - Pendiente de Pago",
+                                          "Estatus_Nuevo":  2,
+                                          "Nombre_Estatus_Nuevo":  "Pagada - Pendiente por Atender",
+                                          "Usuario_Modifico":  null,
+                                          "Nombre_Usuario":  null,
+                                          "Rol_Usuario":  null,
+                                          "Fecha_Cambio":  "2026-01-02T22:44:11.000Z",
+                                          "Monto_Devuelto":  null,
+                                          "Motivo":  null,
+                                          "Tipo_Cancelacion":  null
+                                      },
+                                      {
+                                          "Id_Bitacora":  1,
+                                          "Id_Cita":  36,
+                                          "Fecha_cita":  "2025-12-29T00:00:00.000Z",
+                                          "Hora_Inicio":  "1970-01-01T11:00:00.000Z",
+                                          "Hora_Fin":  "1970-01-01T12:00:00.000Z",
+                                          "Id_Paciente":  5,
+                                          "Paciente":  "Pedro Luna Vidal",
+                                          "Id_Doctor":  1,
+                                          "Doctor":  "Roberto Bravo",
+                                          "Especialidad":  "Cardiología",
+                                          "Estatus_Anterior":  1,
+                                          "Nombre_Estatus_Anterior":  "Agendada - Pendiente de Pago",
+                                          "Estatus_Nuevo":  2,
+                                          "Nombre_Estatus_Nuevo":  "Pagada - Pendiente por Atender",
+                                          "Usuario_Modifico":  null,
+                                          "Nombre_Usuario":  null,
+                                          "Rol_Usuario":  null,
+                                          "Fecha_Cambio":  "2026-01-02T22:41:25.000Z",
+                                          "Monto_Devuelto":  null,
+                                          "Motivo":  null,
+                                          "Tipo_Cancelacion":  null
+                                      }
+                                  ]
+                },
+    "detalleCita":  {
+                        "success":  true,
+                        "id_cita":  37,
+                        "total_cambios":  1,
+                        "cambios":  [
+                                        {
+                                            "Id_Bitacora":  3,
+                                            "Id_Cita":  37,
+                                            "Estatus_Anterior":  1,
+                                            "Estatus_Nuevo":  2,
+                                            "Nombre_Estatus_Anterior":  "Agendada - Pendiente de Pago",
+                                            "Nombre_Estatus_Nuevo":  "Pagada - Pendiente por Atender",
+                                            "Usuario_Modifico":  null,
+                                            "Nombre_Usuario":  null,
+                                            "Rol_Usuario":  null,
+                                            "Fecha_Cambio":  "2026-01-02T22:44:11.000Z",
+                                            "Monto_Devuelto":  null,
+                                            "Motivo":  null,
+                                            "Tipo_Cancelacion":  null
+                                        }
+                                    ]
+                    },
+    "historialPaciente":  {
+                              "success":  true,
+                              "id_paciente":  1,
+                              "total_accesos":  1,
+                              "accesos":  [
+                                              {
+                                                  "Id_Bitacora":  2,
+                                                  "Id_Cita":  33,
+                                                  "Fecha_cita":  "2025-12-30T00:00:00.000Z",
+                                                  "Id_Paciente":  1,
+                                                  "Usuario_Acceso":  2,
+                                                  "Nombre_Usuario":  "Doctor_Ana_Gomez",
+                                                  "Rol_Usuario":  "Doctor",
+                                                  "Tipo_Accion":  "CREACION_RECETA",
+                                                  "Fecha_Accion":  "2026-01-03T05:16:44.000Z",
+                                                  "Id_Receta":  8,
+                                                  "Detalles":  "Receta creada para paciente 1 (cita 33).",
+                                                  "IP_Origen":  "127.0.0.1",
+                                                  "Doctor_Atencion":  "Roberto Bravo",
+                                                  "Especialidad":  "Cardiología"
+                                              }
+                                          ]
+                          },
+    "estadisticas":  {
+                         "success":  true,
+                         "estadisticas":  {
+                                              "cambios_por_estatus":  [
+                                                                          {
+                                                                              "estatus":  "Pagada - Pendiente por Atender",
+                                                                              "total":  2
+                                                                          }
+                                                                      ],
+                                              "cancelaciones_por_tipo":  [
+
+                                                                         ],
+                                              "monto_total_devuelto":  null
+                                          }
+                     }
+}

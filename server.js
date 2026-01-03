@@ -17,6 +17,7 @@ const cancelacionesRoutes = require('./src/routes/cancelaciones.routes');
 const pacientesRoutes = require('./src/routes/pacientes.routes');
 const doctoresRoutes = require('./src/routes/doctores.routes');
 const recepcionRoutes = require('./src/routes/recepcion.routes'); // FASE 3
+const bitacorasRoutes = require('./src/routes/bitacoras.routes'); // FASE 5
 
 app.use('/api/citas', citasRoutes);
 app.use('/auth', authRoutes);
@@ -25,6 +26,7 @@ app.use('/api/cancelaciones', cancelacionesRoutes);
 app.use('/api/pacientes', pacientesRoutes);
 app.use('/api/doctores', doctoresRoutes);
 app.use('/api/recepcion', recepcionRoutes); // FASE 3
+app.use('/api/bitacoras', bitacorasRoutes); // FASE 5
 
 app.get('/', (req, res) => {
   res.send('API del Gestor Hospital funcionando...');

@@ -1,5 +1,31 @@
 <template>
   <div class="panel-doctor">
+    <!-- Modal Generar Receta -->
+    <div v-if="mostrarReceta" class="modal-backdrop">
+      <div class="modal-content-custom">
+        <button class="btn-close-modal" @click="mostrarReceta = false">✕</button>
+        <GenerarReceta 
+          :cita="citaSeleccionada"
+          :citasDisponibles="citas"
+          :especialidad="especialidad"
+          @cerrar="mostrarReceta = false"
+          @receta-creada="onRecetaCreada"
+        />
+      </div>
+    </div>
+
+    <!-- Modal Historial Médico -->
+    <div v-if="mostrarHistorial" class="modal-backdrop">
+      <div class="modal-content-custom">
+        <button class="btn-close-modal" @click="mostrarHistorial = false">✕</button>
+        <HistorialMedico 
+          :pacienteId="pacienteSeleccionado?.Id_Paciente"
+          :pacienteData="pacienteSeleccionado"
+          @cerrar="mostrarHistorial = false"
+        />
+      </div>
+    </div>
+
     <div class="card shadow-sm">
       <div class="card-header bg-primary text-white">
         <div class="d-flex justify-content-between align-items-center">
@@ -63,11 +89,26 @@
                   <span class="badge" :class="getEstatusBadge(c.Estatus)">{{ c.Estatus }}</span>
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-success" 
-                          v-if="puedeMarcarAtendida(c)" 
-                          @click="marcarAtendida(c)"
-                  >Marcar atendida</button>
-                  <span v-else class="text-muted small">—</span>
+                  <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-success" 
+                            v-if="puedeMarcarAtendida(c)" 
+                            @click="marcarAtendida(c)"
+                            title="Marcar esta cita como atendida">
+                      ✓ Atendida
+                    </button>
+                    <button class="btn btn-sm btn-info"
+                            v-if="puedeMarcarAtendida(c)"
+                            @click="abrirReceta(c)"
+                            title="Generar receta para este paciente">
+                      💊 Receta
+                    </button>
+                    <button class="btn btn-sm btn-outline-info"
+                            @click="abrirHistorial(c)"
+                            title="Ver historial médico del paciente">
+                      📋 Historial
+                    </button>
+                  </div>
+                  <span v-if="!puedeMarcarAtendida(c)" class="text-muted small">—</span>
                 </td>
               </tr>
             </tbody>
@@ -80,9 +121,15 @@
 
 <script>
 import CitaService from '../../services/CitaService';
+import GenerarReceta from './GenerarReceta.vue';
+import HistorialMedico from './HistorialMedico.vue';
 
 export default {
   name: 'PanelDoctor',
+  components: {
+    GenerarReceta,
+    HistorialMedico
+  },
   data(){
     return {
       nombreCompleto: `${localStorage.getItem('nombre')||''} ${localStorage.getItem('paterno')||''}`.trim(),
@@ -90,7 +137,11 @@ export default {
       filtros: { fecha_inicio: '', fecha_fin: '' },
       citas: [],
       mensaje: '',
-      isError: false
+      isError: false,
+      mostrarReceta: false,
+      mostrarHistorial: false,
+      citaSeleccionada: null,
+      pacienteSeleccionado: null
     }
   },
   mounted(){
@@ -156,6 +207,24 @@ export default {
         this.mensaje = e.message; this.isError=true;
       }
     },
+    abrirReceta(cita){
+      this.citaSeleccionada = cita;
+      this.mostrarReceta = true;
+    },
+    abrirHistorial(cita){
+      this.pacienteSeleccionado = {
+        Id_Paciente: cita.Id_Paciente,
+        Nombre: cita.Paciente
+      };
+      this.mostrarHistorial = true;
+    },
+    onRecetaCreada(data){
+      this.mensaje = `✓ Receta creada exitosamente`;
+      this.mostrarReceta = false;
+      setTimeout(() => {
+        this.mensaje = '';
+      }, 3000);
+    },
     logout(){
       localStorage.clear();
       window.location.href = '/login.html';
@@ -184,5 +253,65 @@ export default {
 .badge {
   font-size: 0.85rem;
   padding: 0.35em 0.65em;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content-custom {
+  background: white;
+  border-radius: 8px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.btn-close-modal {
+  position: sticky;
+  top: 0;
+  right: 0;
+  z-index: 10;
+  float: right;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.btn-close-modal:hover {
+  background: #e9ecef;
+  color: #000;
+}
+
+.btn-group {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.btn-group .btn {
+  flex: 1;
+  min-width: 60px;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+  white-space: nowrap;
 }
 </style>

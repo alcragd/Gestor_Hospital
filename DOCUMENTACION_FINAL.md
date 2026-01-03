@@ -803,7 +803,8 @@ Get-Process -Name node
 - 2 Bitacora_Historial_Medico de prueba
 - 84 Bitacora registros de prueba
 
-**Script usado:** `scripts/PASO2_LIMPIEZA_DEFINITIVA.sql`
+**Script usado:** `scripts/PASO2_LIMPIEZA_DEFINITIVA.sql` (ejecutado y removido)  
+**Carpeta scripts/:** Actualmente vacía - todos los scripts de limpieza fueron ejecutados exitosamente y posteriormente eliminados para mantener el repositorio limpio.
 
 ---
 
@@ -999,24 +1000,35 @@ ORDER BY Nombre;
 ### Archivos Clave del Proyecto
 
 **Documentación:**
-- ✅ `DOCUMENTACION_FINAL.md` (este archivo)
-- ✅ `GUION_DEMOSTRACION_FINAL.md` (guía de demostración)
-- ✅ `COBERTURA_UI_REQUISITOS.md` (mapeo UI-requisitos)
+- ✅ `DOCUMENTACION_FINAL.md` (este archivo - documentación completa)
+- ✅ `COBERTURA_UI_REQUISITOS.md` (mapeo 23 requisitos vs UI)
 - ✅ `VEREDICTO_FINAL_AUDITORIA.md` (auditoría de bitácoras)
+- ✅ `README.md` (guía de instalación y uso)
 
-**Scripts SQL:**
-- ✅ `scripts/PASO2_LIMPIEZA_DEFINITIVA.sql` (limpieza ejecutada)
-- ✅ `sql/GestorHospitalDB.bak` (backup de BD)
+**Base de Datos:**
+- ✅ `sql/GestorHospitalDB.bak` (backup de BD limpia - 64 MB)
+- ⚠️ `scripts/` (carpeta vacía - scripts de limpieza ya ejecutados y removidos)
 
 **Backend:**
-- ✅ `server.js` (punto de entrada)
-- ✅ `src/controllers/` (15+ controladores)
-- ✅ `src/services/` (lógica de negocio)
-- ✅ `src/routes/` (30+ rutas API)
+- ✅ `server.js` (punto de entrada - puerto 3000)
+- ✅ `src/controllers/` (15+ controladores con lógica de negocio)
+- ✅ `src/services/` (capa de servicios para BD)
+- ✅ `src/routes/` (30+ rutas API RESTful)
+- ✅ `src/config/db.config.js` (configuración SQL Server)
 
 **Frontend:**
-- ✅ `Gestor-Front/src/components/` (15+ componentes Vue)
+- ✅ `Gestor-Front/src/components/` (21 componentes Vue.js)
+  - FormularioCita.vue
+  - GenerarReceta.vue (NUEVO)
+  - HistorialMedico.vue (NUEVO)
+  - PanelDoctor.vue, PanelPaciente.vue, PanelRecepcionista.vue
+  - GestionCitas.vue, GestionPacientes.vue, GestionDoctores.vue
+  - Farmacia.vue, VentaServicios.vue
+  - Y más...
 - ✅ `Gestor-Front/public/` (páginas HTML por rol)
+  - login.html (autenticación)
+  - doctor.html, paciente.html, recepcion.html, farmacia.html
+- ✅ `Gestor-Front/src/services/` (API calls con Axios)
 
 ---
 

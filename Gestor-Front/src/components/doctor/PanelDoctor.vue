@@ -93,13 +93,13 @@
                     <button class="btn btn-sm btn-success" 
                             v-if="puedeMarcarAtendida(c)" 
                             @click="marcarAtendida(c)"
-                            title="Marcar esta cita como atendida">
+                            title="Marcar esta cita como atendida (después de la hora programada)">
                       ✓ Atendida
                     </button>
                     <button class="btn btn-sm btn-info"
                             v-if="puedeMarcarAtendida(c)"
                             @click="abrirReceta(c)"
-                            title="Generar receta para este paciente">
+                            title="Generar receta para este paciente (después de la hora programada)">
                       💊 Receta
                     </button>
                     <button class="btn btn-sm btn-outline-info"
@@ -212,11 +212,19 @@ export default {
       this.mostrarReceta = true;
     },
     abrirHistorial(cita){
+      console.log('📋 Abriendo historial para cita:', cita);
+      console.log('Campos disponibles en cita:', Object.keys(cita));
+      
+      const idPaciente = cita.ID_Paciente || cita.Id_Paciente;
+      
+      // Establecer datos básicos primero
       this.pacienteSeleccionado = {
-        Id_Paciente: cita.Id_Paciente,
+        Id_Paciente: idPaciente,
         Nombre: cita.Paciente
       };
+      console.log('🎯 pacienteSeleccionado establecido:', this.pacienteSeleccionado);
       this.mostrarHistorial = true;
+      // Los datos completos se obtendrán si es necesario, pero el historial funciona con datos básicos
     },
     onRecetaCreada(data){
       this.mensaje = `✓ Receta creada exitosamente`;

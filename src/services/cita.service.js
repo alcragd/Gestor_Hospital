@@ -157,17 +157,10 @@ class CitaService {
                 .input('Fecha', db.sql.Date, fecha)
                 .query(`SELECT DATENAME(DW, @Fecha) AS DiaSemana`);
             
-            const diaSemanaEspañol = {
-                'Monday': 'Lunes',
-                'Tuesday': 'Martes',
-                'Wednesday': 'Miércoles',
-                'Thursday': 'Jueves',
-                'Friday': 'Viernes',
-                'Saturday': 'Sábado',
-                'Sunday': 'Domingo'
-            }[diaSemana.recordset[0].DiaSemana];
+            // SQL Server ya retorna el día en español (idioma configurado)
+            const diaSemanaEspañol = diaSemana.recordset[0].DiaSemana;
 
-            console.log('Día de la semana en español:', diaSemanaEspañol);
+            console.log('Día de la semana obtenido:', diaSemanaEspañol);
 
             const result = await pool.request()
                 .input('Id_Doctor', db.sql.Int, id_doctor)
@@ -183,6 +176,7 @@ class CitaService {
                     WHERE 
                         D.Id_Doctor = @Id_Doctor
                         AND H.Dia_Semana = @DiaSemana
+                    ORDER BY H.Hora_Inicio
                 `);
 
             console.log('Horas de trabajo:', result.recordset);

@@ -110,17 +110,24 @@
                       <strong>Diagnóstico:</strong><br>
                       {{ receta.Diagnostico }}
                     </p>
-                    <p v-if="receta.Medicamentos" class="mb-2">
-                      <strong>Medicamentos:</strong><br>
-                      <small>{{ receta.Medicamentos }}</small>
+                    <p v-if="receta.Medicamentos && receta.Medicamentos.length > 0" class="mb-2">
+                      <strong>Medicamentos:</strong>
+                      <ul class="list-unstyled mb-0">
+                        <li v-for="(med, mIdx) in receta.Medicamentos" :key="mIdx" class="ms-3">
+                          <small>
+                            <strong>{{ med.nombre }}</strong> - {{ med.dosis }} 
+                            ({{ med.frecuencia }}, {{ med.duracion }} días)
+                          </small>
+                        </li>
+                      </ul>
                     </p>
-                    <p v-if="receta.Indicaciones">
+                    <p v-if="receta.Indicaciones" class="mb-0">
                       <strong>Indicaciones:</strong><br>
                       <small>{{ receta.Indicaciones }}</small>
                     </p>
                   </div>
                   <div class="card-footer bg-light">
-                    <small class="text-muted">Doctor: {{ receta.Doctor_nombre || 'N/A' }}</small>
+                    <small class="text-muted">Doctor: {{ receta.Doctor || 'N/A' }}</small>
                   </div>
                 </div>
               </div>
@@ -193,7 +200,13 @@ export default {
   data() {
     return {
       tabActivo: 'citas',
-      paciente: this.pacienteData,
+      paciente: this.pacienteData || {
+        Nombre: '',
+        Apellido_paterno: '',
+        Fecha_nacimiento: '',
+        Correo: '',
+        Telefono: ''
+      },
       citas: [],
       recetas: [],
       diagnosticos: [],
@@ -203,14 +216,52 @@ export default {
     };
   },
   mounted() {
-    this.cargarHistorial();
+    console.log('📂 HistorialMedico mounted');
+    console.log('Props recibidos - pacienteId:', this.pacienteId);
+    console.log('Props recibidos - pacienteData:', this.pacienteData);
+    
+    // Obtener pacienteId directamente de pacienteData si no viene en prop
+    const idPaciente = this.pacienteId || (this.pacienteData?.Id_Paciente);
+    console.log('🔑 ID Paciente a usar:', idPaciente);
+    
+    // Si recibimos pacienteData con los datos completos, mapearlos
+    if (this.pacienteData) {
+      console.log('🔄 Mapeando datos del paciente desde props...');
+      this.paciente = {
+        Nombre: this.pacienteData.Nombre || '',
+        Apellido_paterno: this.pacienteData.Paterno || this.pacienteData.Apellido_paterno || '',
+        Apellido_materno: this.pacienteData.Materno || this.pacienteData.Apellido_materno || '',
+        Fecha_nacimiento: this.pacienteData.Fecha_nac || this.pacienteData.Fecha_nacimiento || '',
+        Correo: this.pacienteData.Correo || this.pacienteData.Email || '',
+        Telefono: this.pacienteData.Telefono || '',
+        Sexo: this.pacienteData.Sexo || '',
+        DNI: this.pacienteData.DNI || ''
+      };
+      console.log('✅ Paciente mapeado:', this.paciente);
+    } else {
+      console.warn('⚠️ No se recibió pacienteData completa');
+    }
+    
+    this.cargarHistorial(idPaciente);
   },
   methods: {
-    async cargarHistorial() {
+    async cargarHistorial(idPaciente) {
       this.isLoading = true;
+      console.log('📚 Cargando historial para paciente ID:', idPaciente);
+      
+      if (!idPaciente) {
+        console.error('🚨 ERROR: No hay ID de paciente para cargar historial');
+        this.isLoading = false;
+        return;
+      }
+      
       try {
-        const response = await fetch(
-          `http://localhost:3000/api/doctores/paciente/${this.pacienteId}/historial`,
+        // Obtener historial del paciente
+        const url = `http://localhost:3000/api/doctores/paciente/${idPaciente}/historial`;
+        console.log('🔗 URL:', url);
+        
+        const historialResponse = await fetch(
+          url,
           {
             headers: {
               'x-user-id': localStorage.getItem('userId'),
@@ -219,16 +270,78 @@ export default {
           }
         );
 
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}`);
+        console.log('📡 Response status:', historialResponse.status);
+
+        if (!historialResponse.ok) {
+          const errorText = await historialResponse.text();
+          console.error('❌ Error en historial:', errorText);
+          throw new Error(`Error ${historialResponse.status}`);
         }
 
-        const data = await response.json();
+        const data = await historialResponse.json();
+        console.log('✅ Datos historial recibidos:', data);
 
+        // El endpoint retorna 'citas' y 'recetas' por separado
         this.citas = Array.isArray(data.citas) ? data.citas : [];
         this.recetas = Array.isArray(data.recetas) ? data.recetas : [];
-        this.diagnosticos = Array.isArray(data.diagnosticos) ? data.diagnosticos : [];
         this.citasTotal = this.citas.length;
+
+        console.log('📊 Citas recibidas:', this.citas.length);
+        console.log('💊 Recetas recibidas:', this.recetas.length);
+
+        // Parsear medicamentos y construir diagnósticos a partir de recetas
+        this.recetas = this.recetas.map(receta => {
+          let medicamentosArray = receta.Medicamentos;
+          // Si medicamentos es string JSON, parsearlo
+          if (typeof medicamentosArray === 'string') {
+            try {
+              medicamentosArray = JSON.parse(medicamentosArray);
+            } catch (e) {
+              console.warn('⚠️ No se pudo parsear medicamentos:', receta.Medicamentos);
+              medicamentosArray = [];
+            }
+          }
+          return {
+            ...receta,
+            Medicamentos: medicamentosArray
+          };
+        });
+
+        // Construir array de diagnósticos a partir de recetas
+        this.diagnosticos = this.recetas.map((receta, idx) => ({
+          Id_Diagnostico: idx,
+          Fecha: receta.Fecha_Emision,
+          Doctor: receta.Doctor,
+          Diagnostico: receta.Diagnostico,
+          Indicaciones: receta.Indicaciones,
+          Estado: 'Registrado'
+        }));
+
+        console.log('📋 Diagnósticos construidos:', this.diagnosticos.length);
+        console.log('💊 Recetas parseadas:', this.recetas);
+
+        // Extraer datos del paciente del primer registro de citas
+        if (this.citas.length > 0) {
+          const primerCita = this.citas[0];
+          console.log('📦 Primer cita con datos paciente:', primerCita);
+          
+          this.paciente = {
+            Nombre: primerCita.Paciente_Nombre || this.paciente.Nombre || '',
+            Apellido_paterno: primerCita.Paciente_Paterno || this.paciente.Apellido_paterno || '',
+            Apellido_materno: primerCita.Paciente_Materno || this.paciente.Apellido_materno || '',
+            Fecha_nacimiento: primerCita.Paciente_Fecha_Nacimiento || this.paciente.Fecha_nacimiento || '',
+            Correo: primerCita.Paciente_Correo || this.paciente.Correo || '',
+            Telefono: primerCita.Paciente_Telefono || this.paciente.Telefono || '',
+            Edad: primerCita.Paciente_Edad || this.calcularEdad(primerCita.Paciente_Fecha_Nacimiento),
+            Sexo: this.paciente.Sexo || '',
+            DNI: this.paciente.DNI || ''
+          };
+          console.log('✅ Paciente actualizado desde historial:', this.paciente);
+        }
+
+        console.log('📊 Citas totales:', this.citasTotal);
+        console.log('💊 Recetas totales:', this.recetas.length);
+        console.log('📋 Diagnósticos totales:', this.diagnosticos.length);
 
         if (this.citas.length > 0) {
           const fechas = this.citas
@@ -239,8 +352,14 @@ export default {
           }
         }
 
+        console.log('✅ Historial completo cargado:');
+        console.log('   📋 Citas:', this.citas.length);
+        console.log('   💊 Recetas:', this.recetas.length);
+        console.log('   🏥 Diagnósticos:', this.diagnosticos.length);
+        console.log('   👤 Paciente:', this.paciente.Nombre);
+
       } catch (error) {
-        console.error('Error cargando historial:', error);
+        console.error('🚨 Error cargando historial:', error);
         this.citas = [];
         this.recetas = [];
         this.diagnosticos = [];

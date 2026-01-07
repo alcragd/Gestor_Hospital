@@ -305,7 +305,7 @@ router.get('/paciente/:id_paciente/historial', async (req, res) => {
     }
 
     // Obtener historial completo de citas del paciente (no solo del doctor actual)
-    const historialRes = await pool.request()
+    const citasRes = await pool.request()
       .input('pacienteId', db.sql.Int, idPaciente)
       .query(`
         SELECT 
@@ -317,20 +317,53 @@ router.get('/paciente/:id_paciente/historial', async (req, res) => {
           E.Nombre AS Especialidad,
           CONCAT(EM.Nombre, ' ', EM.Paterno, ' ', EM.Materno) AS Doctor,
           ES.Nombre AS Estatus,
-          ES.Id_Estatus
+          ES.Id_Estatus,
+          P.Id_Paciente,
+          P.Nombre AS Paciente_Nombre,
+          P.Paterno AS Paciente_Paterno,
+          P.Materno AS Paciente_Materno,
+          P.Fecha_nac AS Paciente_Fecha_Nacimiento,
+          P.Correo AS Paciente_Correo,
+          P.Telefono_cel AS Paciente_Telefono,
+          P.Edad AS Paciente_Edad
         FROM Citas C
         INNER JOIN Doctores D ON C.Id_Doc = D.Id_Doctor
         INNER JOIN Empleados EM ON D.Id_Empleado = EM.Id_Empleado
         INNER JOIN Especialidades E ON D.Id_Especialidad = E.Id_Especialidad
         INNER JOIN Estatus_Cita ES ON C.ID_Estatus = ES.Id_Estatus
+        INNER JOIN Pacientes P ON C.ID_Paciente = P.Id_Paciente
         WHERE C.ID_Paciente = @pacienteId
         ORDER BY C.Fecha_cita DESC, C.Hora_Inicio DESC
       `);
 
+    // Obtener recetas del paciente
+    const recetasRes = await pool.request()
+      .input('pacienteId', db.sql.Int, idPaciente)
+      .query(`
+        SELECT 
+          R.Id_Receta,
+          R.Id_Cita,
+          R.Fecha_Emision,
+          R.Fecha_Vencimiento,
+          R.Diagnostico,
+          R.Indicaciones,
+          R.Medicamentos,
+          R.Observaciones,
+          R.Vigencia_Dias,
+          CONCAT(EM.Nombre, ' ', EM.Paterno, ' ', EM.Materno) AS Doctor
+        FROM Recetas R
+        INNER JOIN Doctores D ON R.Id_Doctor = D.Id_Doctor
+        INNER JOIN Empleados EM ON D.Id_Empleado = EM.Id_Empleado
+        WHERE R.ID_Paciente = @pacienteId
+        ORDER BY R.Fecha_Emision DESC
+      `);
+
     res.json({
       success: true,
-      total: historialRes.recordset.length,
-      historial: historialRes.recordset
+      citas: citasRes.recordset,
+      recetas: recetasRes.recordset,
+      total_citas: citasRes.recordset.length,
+      total_recetas: recetasRes.recordset.length
     });
 
   } catch (error) {
@@ -345,14 +378,28 @@ router.get('/paciente/:id_paciente/historial', async (req, res) => {
 router.post('/receta', async (req, res) => {
   const { userId, role } = getUserContext(req);
   
+  console.log('📋 POST /api/doctores/receta - Inicio');
+  console.log('👤 Usuario:', userId, '| Rol:', role);
+  console.log('📦 Body recibido:', JSON.stringify(req.body));
+  
   if (!userId || role !== 1) {
+    console.log('❌ Acceso denegado - Usuario:', userId, 'Rol:', role);
     return res.status(403).json({ message: 'Acceso restringido a doctores' });
   }
 
   const { Id_Cita, Diagnostico, Indicaciones, Medicamentos, Observaciones, Vigencia_Dias } = req.body;
 
+  console.log('🔑 Parámetros extraídos:');
+  console.log('   - Id_Cita:', Id_Cita);
+  console.log('   - Diagnostico:', Diagnostico?.substring(0, 50) + '...');
+  console.log('   - Indicaciones:', Indicaciones?.substring(0, 50) + '...');
+  console.log('   - Medicamentos (tipo):', Array.isArray(Medicamentos) ? 'Array' : typeof Medicamentos);
+  console.log('   - Medicamentos (contenido):', JSON.stringify(Medicamentos));
+
   // Validar datos requeridos
   if (!Id_Cita || !Diagnostico || !Indicaciones || !Medicamentos) {
+    console.log('❌ Validación fallida - Campos faltantes');
+    console.log('   Id_Cita:', !!Id_Cita, 'Diagnostico:', !!Diagnostico, 'Indicaciones:', !!Indicaciones, 'Medicamentos:', !!Medicamentos);
     return res.status(400).json({ 
       message: 'Se requiere: Id_Cita, Diagnostico, Indicaciones, Medicamentos' 
     });
@@ -373,10 +420,12 @@ router.post('/receta', async (req, res) => {
       `);
 
     if (doctorRes.recordset.length === 0) {
+      console.log('❌ Doctor no encontrado para userId:', userId);
       return res.status(404).json({ message: 'Doctor no encontrado' });
     }
 
     const doctorId = doctorRes.recordset[0].Id_Doctor;
+    console.log('✅ Doctor encontrado - Id_Doctor:', doctorId);
 
     // Validar que la cita existe y está asignada al doctor
     const citaRes = await pool.request()
@@ -387,6 +436,8 @@ router.post('/receta', async (req, res) => {
           C.Id_Cita,
           C.ID_Paciente,
           C.ID_Estatus,
+          C.Fecha_cita,
+          C.Hora_Inicio,
           ES.Nombre AS Estatus
         FROM Citas C
         INNER JOIN Estatus_Cita ES ON C.ID_Estatus = ES.Id_Estatus
@@ -400,13 +451,62 @@ router.post('/receta', async (req, res) => {
     }
 
     const cita = citaRes.recordset[0];
+    console.log('✅ Cita encontrada:');
+    console.log('   - Id_Cita:', cita.Id_Cita);
+    console.log('   - ID_Paciente:', cita.ID_Paciente);
+    console.log('   - ID_Estatus:', cita.ID_Estatus);
+    console.log('   - Estatus:', cita.Estatus);
 
     // Validar que la cita esté en estatus "Atendida" (4) o "Pagada" (2)
     if (![2, 4].includes(cita.ID_Estatus)) {
+      console.log('❌ Cita con estatus no válido para crear receta:', cita.ID_Estatus);
       return res.status(400).json({ 
         message: `No se puede crear receta para esta cita. Estatus actual: ${cita.Estatus}` 
       });
     }
+
+    // Validar que ya es la hora de la cita
+    if (!cita.Fecha_cita || !cita.Hora_Inicio) {
+      return res.status(400).json({
+        message: 'No se puede generar receta: faltan Fecha_cita/Hora_Inicio en la cita'
+      });
+    }
+    // Normalizar hora de inicio que puede venir como string o Date
+    const extraerHoraMin = (valor) => {
+      if (!valor) return null;
+      if (typeof valor === 'string') {
+        const partes = valor.split(':');
+        const h = parseInt(partes[0] || '0', 10);
+        const m = parseInt(partes[1] || '0', 10);
+        if (Number.isFinite(h) && Number.isFinite(m)) return { h, m };
+        return null;
+      }
+      if (Object.prototype.toString.call(valor) === '[object Date]' && !Number.isNaN(valor.getTime?.())) {
+        return { h: valor.getHours(), m: valor.getMinutes() };
+      }
+      return null;
+    };
+
+    const ahora = new Date();
+    const fechaCita = new Date(cita.Fecha_cita);
+    const hm = extraerHoraMin(cita.Hora_Inicio);
+    if (!hm) {
+      return res.status(400).json({ message: 'No se puede generar receta: formato de Hora_Inicio no válido' });
+    }
+    fechaCita.setHours(hm.h, hm.m, 0, 0);
+
+    if (ahora < fechaCita) {
+      const tiempoRestante = Math.ceil((fechaCita - ahora) / (1000 * 60));
+      return res.status(400).json({ 
+        message: `No se puede generar receta antes del horario de la cita. Faltan ${tiempoRestante} minutos.`,
+        tiempoRestante
+      });
+    }
+
+    console.log('📝 Creando receta con parámetros:');
+    console.log('   - Id_Doctor:', doctorId);
+    console.log('   - ID_Paciente:', cita.ID_Paciente);
+    console.log('   - Vigencia_Dias:', Vigencia_Dias || 30);
 
     // Crear la receta
     const insertRes = await pool.request()
@@ -415,7 +515,7 @@ router.post('/receta', async (req, res) => {
       .input('idPaciente', db.sql.Int, cita.ID_Paciente)
       .input('diagnostico', db.sql.NVarChar(500), Diagnostico)
       .input('indicaciones', db.sql.NVarChar(1000), Indicaciones)
-      .input('medicamentos', db.sql.NVarChar(2000), Medicamentos)
+      .input('medicamentos', db.sql.NVarChar(2000), JSON.stringify(Medicamentos))
       .input('observaciones', db.sql.NVarChar(500), Observaciones || null)
       .input('vigenciaDias', db.sql.Int, Vigencia_Dias || 30)
       .input('usuario', db.sql.NVarChar(50), `Doctor_${userId}`)
@@ -432,6 +532,10 @@ router.post('/receta', async (req, res) => {
       `);
 
     const recetaCreada = insertRes.recordset[0];
+    console.log('✅ Receta creada exitosamente:');
+    console.log('   - Id_Receta:', recetaCreada.Id_Receta);
+    console.log('   - Fecha_Emision:', recetaCreada.Fecha_Emision);
+    console.log('   - Fecha_Vencimiento:', recetaCreada.Fecha_Vencimiento);
 
     res.status(201).json({
       success: true,
@@ -449,7 +553,11 @@ router.post('/receta', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error POST /api/doctores/receta:', error);
+    console.error('❌ Error POST /api/doctores/receta:', error.message);
+    console.error('📋 Stack:', error.stack);
+    if (error.originalError) {
+      console.error('🔴 Error original:', error.originalError.message);
+    }
     res.status(500).json({ message: 'Error al crear receta', details: error.message });
   } finally {
     if (pool) await pool.close();

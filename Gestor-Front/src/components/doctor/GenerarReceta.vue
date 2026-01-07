@@ -263,10 +263,10 @@ export default {
             'x-user-role': localStorage.getItem('userRole')
           },
           body: JSON.stringify({
-            id_cita: this.citaSeleccionada.Id_Cita,
-            diagnostico: this.formulario.diagnostico,
-            medicamentos: this.formulario.medicamentos,
-            indicaciones: this.formulario.indicaciones
+            Id_Cita: this.citaSeleccionada.Id_Cita,
+            Diagnostico: this.formulario.diagnostico,
+            Medicamentos: this.formulario.medicamentos,
+            Indicaciones: this.formulario.indicaciones
           })
         });
 
@@ -276,7 +276,7 @@ export default {
           throw new Error(data.error || `Error ${response.status}`);
         }
 
-        this.mensaje = `✓ Receta generada exitosamente (ID: ${data.id_receta})`;
+        this.mensaje = `✓ Receta generada exitosamente`;
         this.isError = false;
         
         setTimeout(() => {

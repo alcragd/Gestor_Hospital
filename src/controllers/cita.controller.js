@@ -249,7 +249,7 @@ exports.atenderCita = async (req, res) => {
         const citaRes = await pool.request()
             .input('idCita', db.sql.Int, idCita)
             .query(`
-                SELECT Id_Cita, Id_Doc, ID_Estatus
+                SELECT Id_Cita, Id_Doc, ID_Estatus, Fecha_cita, Hora_Inicio
                 FROM Citas
                 WHERE Id_Cita = @idCita
             `);
@@ -262,6 +262,44 @@ exports.atenderCita = async (req, res) => {
         }
         if (cita.ID_Estatus !== 2) {
             return res.status(409).json({ message: 'Solo se pueden marcar como atendidas las citas pagadas' });
+        }
+
+        // Validar que ya es la hora de la cita
+        if (!cita.Fecha_cita || !cita.Hora_Inicio) {
+            return res.status(400).json({
+                message: 'No se puede validar el horario de la cita (faltan Fecha_cita/Hora_Inicio)'
+            });
+        }
+        // Normalizar hora de inicio que puede venir como string o Date
+        const extraerHoraMin = (valor) => {
+            if (!valor) return null;
+            if (typeof valor === 'string') {
+                const partes = valor.split(':');
+                const h = parseInt(partes[0] || '0', 10);
+                const m = parseInt(partes[1] || '0', 10);
+                if (Number.isFinite(h) && Number.isFinite(m)) return { h, m };
+                return null;
+            }
+            if (Object.prototype.toString.call(valor) === '[object Date]' && !Number.isNaN(valor.getTime?.())) {
+                return { h: valor.getHours(), m: valor.getMinutes() };
+            }
+            return null;
+        };
+
+        const ahora = new Date();
+        const fechaCita = new Date(cita.Fecha_cita);
+        const hm = extraerHoraMin(cita.Hora_Inicio);
+        if (!hm) {
+            return res.status(400).json({ message: 'Formato de Hora_Inicio no válido para la cita' });
+        }
+        fechaCita.setHours(hm.h, hm.m, 0, 0);
+
+        if (ahora < fechaCita) {
+            const tiempoRestante = Math.ceil((fechaCita - ahora) / (1000 * 60));
+            return res.status(400).json({ 
+                message: `La cita aún no ha comenzado. Faltan ${tiempoRestante} minutos.`,
+                tiempoRestante
+            });
         }
 
         // Marcar como atendida (estatus 6)

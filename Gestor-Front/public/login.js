@@ -92,6 +92,16 @@ window.login = async function () {
         localStorage.setItem("materno", data.materno || "");
         localStorage.setItem("correo", data.correo);
         localStorage.setItem("telefono", data.telefono || "");
+        // Datos personales adicionales
+        if (data.dni) localStorage.setItem("dni", data.dni);
+        if (data.fecha_nac) localStorage.setItem("fecha_nac", data.fecha_nac);
+        if (data.sexo) localStorage.setItem("sexo", data.sexo);
+        if (typeof data.edad !== 'undefined' && data.edad !== null) localStorage.setItem("edad", String(data.edad));
+        if (data.curp) localStorage.setItem("curp", data.curp);
+        if (data.rfc) localStorage.setItem("rfc", data.rfc);
+        if (data.sueldo) localStorage.setItem("sueldo", String(data.sueldo));
+        if (data.especialidad) localStorage.setItem("especialidad", data.especialidad);
+        if (data.telefono) localStorage.setItem("telefono", data.telefono);
         
         // Datos adicionales según tipo
         if (data.especialidad) {

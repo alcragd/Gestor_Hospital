@@ -104,12 +104,19 @@
       <div class="card-body">
         <ul class="nav nav-tabs mb-3">
           <li class="nav-item">
+            <a class="nav-link" :class="{active: tab==='datos'}" @click="tab='datos'" href="#">Mis Datos</a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link" :class="{active: tab==='agendar'}" @click="tab='agendar'" href="#">Agendar Cita</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" :class="{active: tab==='mis'}" @click="tab='mis'" href="#">Mis Citas</a>
           </li>
         </ul>
+
+        <div v-if="tab==='datos'" class="tab-content">
+          <DatosPersonales :datos="datosPaciente" tipo="paciente" />
+        </div>
 
         <div v-if="tab==='agendar'" class="tab-content">
           <FormularioCita @cita-creada="onCitaCreada" />
@@ -209,6 +216,7 @@
 <script>
 import FormularioCita from '../FormularioCita.vue';
 import ComprobanteCita from '../ComprobanteCita.vue';
+import DatosPersonales from '../DatosPersonales.vue';
 import CitaService from '../../services/CitaService';
 import PagoService from '../../services/PagoService';
 import CancelacionService from '../../services/CancelacionService';
@@ -216,11 +224,12 @@ import CancelacionService from '../../services/CancelacionService';
 
 export default {
   name: 'PanelPaciente',
-  components: { FormularioCita, ComprobanteCita },
+  components: { FormularioCita, ComprobanteCita, DatosPersonales },
   data(){
     return {
       tab: 'agendar',
       nombreCompleto: `${localStorage.getItem('nombre')||''} ${localStorage.getItem('paterno')||''}`.trim(),
+      datosPaciente: {},
       citas: [],
       citasSinFiltrar: [],
       filtros: { fecha_inicio: '', fecha_fin: '' },
@@ -257,9 +266,43 @@ export default {
       window.location.href = '/login.html';
       return;
     }
+    this.cargarDatosPaciente();
     this.cargarMisCitas();
   },
   methods:{
+    async cargarDatosPaciente(){
+      try {
+        const res = await CitaService.misCitasPaciente();
+        if (res?.citas && res.citas.length > 0) {
+          const primeraCita = res.citas[0];
+          this.datosPaciente = {
+            Nombre: localStorage.getItem('nombre') || '',
+            Paterno: localStorage.getItem('paterno') || '',
+            Materno: localStorage.getItem('materno') || '',
+            DNI: localStorage.getItem('dni') || '',
+            Correo: localStorage.getItem('correo') || primeraCita.Correo_Paciente || '',
+            Telefono_cel: localStorage.getItem('telefono') || primeraCita.Telefono_Paciente || '',
+            Edad: localStorage.getItem('edad') || '',
+            Sexo: localStorage.getItem('sexo') || '',
+            Fecha_nac: localStorage.getItem('fecha_nac') || ''
+          };
+        } else {
+          this.datosPaciente = {
+            Nombre: localStorage.getItem('nombre') || '',
+            Paterno: localStorage.getItem('paterno') || '',
+            Materno: localStorage.getItem('materno') || '',
+            DNI: localStorage.getItem('dni') || '',
+            Correo: localStorage.getItem('correo') || '',
+            Telefono_cel: localStorage.getItem('telefono') || '',
+            Edad: localStorage.getItem('edad') || '',
+            Sexo: localStorage.getItem('sexo') || '',
+            Fecha_nac: localStorage.getItem('fecha_nac') || ''
+          };
+        }
+      } catch (err) {
+        console.error('Error cargando datos del paciente:', err);
+      }
+    },
     async cargarMisCitas(){
       this.mensaje=''; this.isError=false;
       try{

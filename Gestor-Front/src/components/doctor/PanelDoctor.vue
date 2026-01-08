@@ -203,77 +203,7 @@
 
         <!-- TAB: DATOS DEL DOCTOR -->
         <div v-if="tab === 'datos'">
-          <div class="row">
-            <div class="col-md-6">
-              <div class="card border mb-3">
-                <div class="card-header bg-light">
-                  <strong>Información Personal</strong>
-                </div>
-                <div class="card-body">
-                  <p><strong>Nombre Completo:</strong> {{ datosDoctor.nombreCompleto }}</p>
-                  <p><strong>Especialidad:</strong> {{ datosDoctor.especialidad }}</p>
-                  <p><strong>Cédula Profesional:</strong> {{ datosDoctor.cedula }}</p>
-                  <p><strong>RFC:</strong> {{ datosDoctor.rfc }}</p>
-                  <p><strong>CURP:</strong> {{ datosDoctor.curp }}</p>
-                  <p><strong>Correo:</strong> {{ datosDoctor.correo }}</p>
-                  <p><strong>Teléfono:</strong> {{ datosDoctor.telefono }}</p>
-                  <small class="text-muted">
-                    Nota: Datos sensibles (Cédula, RFC, CURP, Nombre, Especialidad) solo pueden ser editados por recepción.
-                  </small>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-md-6">
-              <div class="card border mb-3">
-                <div class="card-header bg-light">
-                  <strong>Horario de Trabajo</strong>
-                </div>
-                <div class="card-body">
-                  <div v-if="horario.length > 0">
-                    <table class="table table-sm">
-                      <thead>
-                        <tr>
-                          <th>Día</th>
-                          <th>Entrada</th>
-                          <th>Salida</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="h in horario" :key="h.Dia">
-                          <td>{{ h.Dia }}</td>
-                          <td>{{ formatTime(h.Hora_Inicio) }}</td>
-                          <td>{{ formatTime(h.Hora_Fin) }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  <p v-else class="text-muted">No hay horarios registrados</p>
-                </div>
-              </div>
-
-              <div class="card border">
-                <div class="card-header bg-light">
-                  <strong>Datos Editables</strong>
-                </div>
-                <div class="card-body">
-                  <form @submit.prevent="actualizarDatos">
-                    <div class="mb-3">
-                      <label class="form-label">Correo</label>
-                      <input type="email" class="form-control" v-model="form.correo">
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Teléfono</label>
-                      <input type="text" class="form-control" v-model="form.telefono">
-                    </div>
-                    <button type="submit" class="btn btn-primary" :disabled="guardando">
-                      {{ guardando ? 'Guardando...' : 'Actualizar' }}
-                    </button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
+          <DatosPersonales :datos="datosDoctor" tipo="doctor" />
         </div>
       </div>
     </div>
@@ -284,11 +214,12 @@
 import CitaService from '../../services/CitaService';
 import GenerarReceta from './GenerarReceta.vue';
 import HistorialMedico from './HistorialMedico.vue';
+import DatosPersonales from '../DatosPersonales.vue';
 import axios from 'axios';
 
 export default {
   name: 'PanelDoctor',
-  components: { GenerarReceta, HistorialMedico },
+  components: { GenerarReceta, HistorialMedico, DatosPersonales },
   data() {
     return {
       tab: 'citas',
@@ -299,7 +230,19 @@ export default {
         rfc: '',
         curp: '',
         correo: '',
-        telefono: ''
+        telefono: '',
+        Nombre: '',
+        Paterno: '',
+        Materno: '',
+        Cedula: '',
+        Rfc: '',
+        Correo: '',
+        Telefono_cel: '',
+        Edad: '',
+        Sexo: '',
+        Fecha_nac: '',
+        Sueldo: '',
+        Especialidad: ''
       },
       filtros: { fecha_inicio: '', fecha_fin: '' },
       citas: [],
@@ -354,13 +297,28 @@ export default {
         
         const data = response.data.doctor;
         this.datosDoctor = {
+          // Campos usados por vistas antiguas
           nombreCompleto: `${data.Nombre} ${data.Paterno} ${data.Materno || ''}`.trim(),
           especialidad: data.Especialidad,
           cedula: data.Cedula || 'No disponible',
           rfc: data.Rfc || data.RFC || 'No disponible',
           curp: data.CURP || 'No disponible',
           correo: data.Correo || 'No disponible',
-          telefono: data.Telefono_cel || 'No disponible'
+          telefono: data.Telefono_cel || 'No disponible',
+          // Campos esperados por DatosPersonales.vue (mayúsculas)
+          Nombre: data.Nombre || '',
+          Paterno: data.Paterno || '',
+          Materno: data.Materno || '',
+          Cedula: data.Cedula || '',
+          Rfc: data.Rfc || data.RFC || '',
+          CURP: data.CURP || '',
+          Correo: data.Correo || '',
+          Telefono_cel: data.Telefono_cel || '',
+          Edad: data.Edad || '',
+          Sexo: data.Sexo || '',
+          Fecha_nac: data.Fecha_nac || '',
+          Sueldo: data.Sueldo || '',
+          Especialidad: data.Especialidad || ''
         };
         
         this.form.correo = data.Correo || '';

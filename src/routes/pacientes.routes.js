@@ -376,3 +376,45 @@ router.put("/update/:id", async (req, res) => {
         res.status(500).json({ success: false, message: "Error actualizando" });
     }
 });
+
+// PUT /api/pacientes/:id/sexo -> Actualiza el sexo del paciente (Recepción/Doctor)
+router.put('/:id/sexo', async (req, res) => {
+    const pacienteId = parseInt(req.params.id, 10);
+    const { sexo } = req.body; // Espera 'H' o 'M'
+
+    if (!pacienteId || !sexo || !['H', 'M'].includes(sexo)) {
+        return res.status(400).json({ success: false, message: 'Parámetros inválidos' });
+    }
+
+    let pool;
+    try {
+        pool = await db.connect();
+
+        const existe = await pool.request()
+            .input('id', db.sql.Int, pacienteId)
+            .query('SELECT ID_Paciente FROM Pacientes WHERE ID_Paciente = @id');
+
+        if (existe.recordset.length === 0) {
+            return res.status(404).json({ success: false, message: 'Paciente no encontrado' });
+        }
+
+        await pool.request()
+            .input('id', db.sql.Int, pacienteId)
+            .input('sexo', db.sql.VarChar(1), sexo)
+            .query('UPDATE Pacientes SET Sexo = @sexo WHERE ID_Paciente = @id');
+
+        await pool.request()
+            .input('reg', db.sql.Int, pacienteId)
+            .input('usr', db.sql.VarChar(50), 'system')
+            .input('det', db.sql.VarChar(200), `Actualización de sexo a ${sexo}`)
+            .query(`
+                INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Pacientes')
+            `);
+
+        res.json({ success: true, message: 'Sexo actualizado' });
+    } catch (error) {
+        console.error('❌ Error PUT /api/pacientes/:id/sexo:', error);
+        res.status(500).json({ success: false, message: 'Error interno' });
+    }
+});

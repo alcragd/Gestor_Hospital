@@ -50,6 +50,7 @@
       </div>
 
       <div class="card-body">
+        <DatosPersonales v-if="currentView === 'datos'" :datos="datosRecepcionista" tipo="recepcionista" />
         <GestionPacientes v-if="currentView === 'pacientes'" />
         <GestionDoctores v-if="currentView === 'doctores'" />
         <GestionCitas v-if="currentView === 'citas'" />
@@ -78,6 +79,7 @@ import BitacorasSistema from './BitacorasSistema.vue';
 import HistorialVentas from './HistorialVentas.vue';
 import GestionMedicamentos from './GestionMedicamentos.vue';
 import GestionServicios from './GestionServicios.vue';
+import DatosPersonales from '../DatosPersonales.vue';
 
 export default {
   name: 'PanelRecepcionista',
@@ -92,15 +94,18 @@ export default {
     GestionRecepcionistas,
     HistorialVentas,
     GestionMedicamentos,
-    GestionServicios
+    GestionServicios,
+    DatosPersonales
   },
   data() {
     return {
-      currentView: 'pacientes',
+      currentView: 'datos',
       usuarioNombre: 'Recepcionista',
       userId: localStorage.getItem('userId') || 'N/A',
+      datosRecepcionista: {},
       sidebarOpen: false,
       menuItems: [
+        { id: 'datos', label: 'Mis Datos' },
         { id: 'pacientes', label: 'Pacientes' },
         { id: 'doctores', label: 'Doctores' },
         { id: 'citas', label: 'Citas' },
@@ -116,10 +121,36 @@ export default {
     };
   },
   mounted() {
+    this.cargarDatosRecepcionista();
     this.cargarDatosUsuario();
     console.log('PanelRecepcionista montado - currentView:', this.currentView);
   },
   methods: {
+    async cargarDatosRecepcionista() {
+      try {
+        const empleadoId = localStorage.getItem('empleadoId');
+        const nombre = localStorage.getItem('nombre') || '';
+        const paterno = localStorage.getItem('paterno') || '';
+        const materno = localStorage.getItem('materno') || '';
+        
+        this.datosRecepcionista = {
+          Nombre: nombre,
+          Paterno: paterno,
+          Materno: materno,
+          CURP: localStorage.getItem('curp') || '',
+          Correo: localStorage.getItem('correo') || '',
+          Telefono_cel: localStorage.getItem('telefono') || '',
+          Edad: localStorage.getItem('edad') || '',
+          Sexo: localStorage.getItem('sexo') || '',
+          Fecha_nac: localStorage.getItem('fecha_nac') || '',
+          Sueldo: localStorage.getItem('sueldo') || '',
+          Username: localStorage.getItem('username') || '',
+          Activo: localStorage.getItem('activo') || 1
+        };
+      } catch (err) {
+        console.error('Error cargando datos de recepcionista:', err);
+      }
+    },
     cargarDatosUsuario() {
       const username = localStorage.getItem('username');
       if (username) {

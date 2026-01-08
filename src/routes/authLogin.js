@@ -166,6 +166,10 @@ router.post("/loginGeneral", async (req, res) => {
                         Nombre,
                         Paterno,
                         Materno,
+                        DNI,
+                        Fecha_nac,
+                        Sexo,
+                        Edad,
                         Telefono_cel,
                         Telefono_emergencia
                     FROM Pacientes 
@@ -183,7 +187,11 @@ router.post("/loginGeneral", async (req, res) => {
                     materno: paciente.Materno || "",
                     correo: user.Correo,
                     telefono: paciente.Telefono_cel,
-                    emergencia: paciente.Telefono_emergencia
+                    emergencia: paciente.Telefono_emergencia,
+                    dni: paciente.DNI,
+                    fecha_nac: paciente.Fecha_nac,
+                    sexo: paciente.Sexo,
+                    edad: paciente.Edad
                 };
                 console.log("✅ Datos paciente:", userData);
             }
@@ -194,10 +202,15 @@ router.post("/loginGeneral", async (req, res) => {
                 .query(`
                     SELECT 
                         d.Id_Doctor,
+                        d.Rfc,
                         e.Nombre,
                         e.Paterno,
                         e.Materno,
+                        e.CURP,
                         e.Telefono_cel,
+                        e.Fecha_nac,
+                        e.Sexo,
+                        e.Sueldo,
                         esp.Nombre AS Especialidad,
                         e.Activo
                     FROM Doctores d
@@ -218,7 +231,12 @@ router.post("/loginGeneral", async (req, res) => {
                     correo: user.Correo,
                     telefono: doctor.Telefono_cel,
                     especialidad: doctor.Especialidad,
-                    activo: doctor.Activo
+                    activo: doctor.Activo,
+                    curp: doctor.CURP,
+                    rfc: doctor.Rfc,
+                    fecha_nac: doctor.Fecha_nac,
+                    sexo: doctor.Sexo,
+                    sueldo: doctor.Sueldo
                 };
             }
 
@@ -231,7 +249,11 @@ router.post("/loginGeneral", async (req, res) => {
                         e.Nombre,
                         e.Paterno,
                         e.Materno,
-                        e.Telefono_cel
+                        e.Telefono_cel,
+                        e.CURP,
+                        e.Fecha_nac,
+                        e.Sexo,
+                        e.Sueldo
                     FROM Farmaceutico f
                     JOIN Empleados e ON e.Id_Empleado = f.Id_Empleado
                     WHERE e.Id_User = @userId
@@ -247,7 +269,11 @@ router.post("/loginGeneral", async (req, res) => {
                     paterno: farm.Paterno,
                     materno: farm.Materno || "",
                     correo: user.Correo,
-                    telefono: farm.Telefono_cel
+                    telefono: farm.Telefono_cel,
+                    curp: farm.CURP,
+                    fecha_nac: farm.Fecha_nac,
+                    sexo: farm.Sexo,
+                    sueldo: farm.Sueldo
                 };
             }
 
@@ -261,7 +287,11 @@ router.post("/loginGeneral", async (req, res) => {
                         e.Nombre,
                         e.Paterno,
                         e.Materno,
+                        e.CURP,
                         e.Telefono_cel,
+                        e.Fecha_nac,
+                        e.Sexo,
+                        e.Sueldo,
                         e.Activo
                     FROM Empleados e
                     WHERE e.Id_User = @userId AND e.Activo = 1
@@ -278,7 +308,11 @@ router.post("/loginGeneral", async (req, res) => {
                     materno: emp.Materno || "",
                     correo: user.Correo,
                     telefono: emp.Telefono_cel,
-                    activo: emp.Activo
+                    activo: emp.Activo,
+                    curp: emp.CURP,
+                    fecha_nac: emp.Fecha_nac,
+                    sexo: emp.Sexo,
+                    sueldo: emp.Sueldo
                 };
             }
         }

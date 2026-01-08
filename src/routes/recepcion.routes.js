@@ -85,6 +85,24 @@ router.put('/recepcionistas/:id', recepcionController.actualizarRecepcionista);
 router.post('/recepcionistas/:id/baja', recepcionController.darDeBajaRecepcionista);
 
 // ═══════════════════════════════════════════════════════════════
+// RUTAS - GESTIÓN DE CONSULTORIOS
+// ═══════════════════════════════════════════════════════════════
+
+router.get('/consultorios', recepcionController.listarConsultorios);
+router.post('/consultorios', recepcionController.crearConsultorio);
+router.put('/consultorios/:id', recepcionController.actualizarConsultorio);
+router.delete('/consultorios/:id', recepcionController.eliminarConsultorio);
+
+// ═══════════════════════════════════════════════════════════════
+// RUTAS - GESTIÓN DE ESPECIALIDADES
+// ═══════════════════════════════════════════════════════════════
+
+router.get('/especialidades', recepcionController.listarEspecialidades);
+router.post('/especialidades', recepcionController.crearEspecialidad);
+router.put('/especialidades/:id', recepcionController.actualizarEspecialidad);
+router.delete('/especialidades/:id', recepcionController.eliminarEspecialidad);
+
+// ═══════════════════════════════════════════════════════════════
 // RUTAS - SERVICIOS EXTRA
 // ═══════════════════════════════════════════════════════════════
 

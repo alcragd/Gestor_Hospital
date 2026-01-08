@@ -53,6 +53,8 @@
         <GestionPacientes v-if="currentView === 'pacientes'" />
         <GestionDoctores v-if="currentView === 'doctores'" />
         <GestionCitas v-if="currentView === 'citas'" />
+        <GestionConsultorios v-if="currentView === 'consultorios'" />
+        <GestionEspecialidades v-if="currentView === 'especialidades'" />
         <VentasUnificadas v-if="currentView === 'ventas'" />
         <HistorialVentas v-if="currentView === 'historial'" />
         <GestionMedicamentos v-if="currentView === 'medicamentos'" />
@@ -68,6 +70,8 @@
 import GestionPacientes from './GestionPacientes.vue';
 import GestionDoctores from './GestionDoctores.vue';
 import GestionCitas from './GestionCitas.vue';
+import GestionConsultorios from './GestionConsultorios.vue';
+import GestionEspecialidades from './GestionEspecialidades.vue';
 import VentasUnificadas from './VentasUnificadas.vue';
 import GestionRecepcionistas from './GestionRecepcionistas.vue';
 import BitacorasSistema from './BitacorasSistema.vue';
@@ -81,6 +85,8 @@ export default {
     GestionPacientes,
     GestionDoctores,
     GestionCitas,
+    GestionConsultorios,
+    GestionEspecialidades,
     VentasUnificadas,
     BitacorasSistema,
     GestionRecepcionistas,
@@ -98,6 +104,8 @@ export default {
         { id: 'pacientes', label: 'Pacientes' },
         { id: 'doctores', label: 'Doctores' },
         { id: 'citas', label: 'Citas' },
+        { id: 'consultorios', label: 'Consultorios' },
+        { id: 'especialidades', label: 'Especialidades' },
         { id: 'ventas', label: 'Ventas' },
         { id: 'historial', label: 'Historial de Ventas' },
         { id: 'medicamentos', label: 'Medicamentos' },

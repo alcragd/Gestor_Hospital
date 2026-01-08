@@ -470,6 +470,144 @@ class RecepcionService {
         }
     }
 
+    // ==================== CONSULTORIOS ====================
+
+    async listarConsultorios() {
+        try {
+            const response = await fetch(`${API_URL}/consultorios`, {
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+            if (!response.ok) throw new Error('Error al listar consultorios');
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.listarConsultorios:', error);
+            throw error;
+        }
+    }
+
+    async crearConsultorio(data) {
+        try {
+            const response = await fetch(`${API_URL}/consultorios`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al crear consultorio');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.crearConsultorio:', error);
+            throw error;
+        }
+    }
+
+    async actualizarConsultorio(id, data) {
+        try {
+            const response = await fetch(`${API_URL}/consultorios/${id}`, {
+                method: 'PUT',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al actualizar consultorio');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.actualizarConsultorio:', error);
+            throw error;
+        }
+    }
+
+    async eliminarConsultorio(id) {
+        try {
+            const response = await fetch(`${API_URL}/consultorios/${id}`, {
+                method: 'DELETE',
+                headers: this.getHeaders()
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al eliminar consultorio');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.eliminarConsultorio:', error);
+            throw error;
+        }
+    }
+
+    // ==================== ESPECIALIDADES ====================
+
+    async listarEspecialidades() {
+        try {
+            const response = await fetch(`${API_URL}/especialidades`, {
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+            if (!response.ok) throw new Error('Error al listar especialidades');
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.listarEspecialidades:', error);
+            throw error;
+        }
+    }
+
+    async crearEspecialidad(data) {
+        try {
+            const response = await fetch(`${API_URL}/especialidades`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al crear especialidad');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.crearEspecialidad:', error);
+            throw error;
+        }
+    }
+
+    async actualizarEspecialidad(id, data) {
+        try {
+            const response = await fetch(`${API_URL}/especialidades/${id}`, {
+                method: 'PUT',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al actualizar especialidad');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.actualizarEspecialidad:', error);
+            throw error;
+        }
+    }
+
+    async eliminarEspecialidad(id) {
+        try {
+            const response = await fetch(`${API_URL}/especialidades/${id}`, {
+                method: 'DELETE',
+                headers: this.getHeaders()
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al eliminar especialidad');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.eliminarEspecialidad:', error);
+            throw error;
+        }
+    }
+
     // ==================== HISTORIAL DE VENTAS ====================
 
     async obtenerHistorialVentas(filtros) {

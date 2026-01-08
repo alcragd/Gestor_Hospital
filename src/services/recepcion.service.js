@@ -648,6 +648,363 @@ class RecepcionService {
             throw error;
         }
     }
+
+    // ==================== CONSULTORIOS ====================
+
+    async listarConsultorios() {
+        let pool;
+        try {
+            pool = await db.connect();
+            const result = await pool.request().query(`
+                SELECT 
+                    C.Id_Consultorio,
+                    C.Numero,
+                    C.Piso,
+                    ESP.Id_Especialidad,
+                    ESP.Nombre AS Especialidad,
+                    ISNULL(COUNT(D.Id_Doctor), 0) AS DoctoresAsignados
+                FROM Consultorio C
+                LEFT JOIN Especialidades ESP ON ESP.ID_Consultorio = C.Id_Consultorio
+                LEFT JOIN Doctores D ON D.Id_Especialidad = ESP.Id_Especialidad
+                GROUP BY C.Id_Consultorio, C.Numero, C.Piso, ESP.Id_Especialidad, ESP.Nombre
+                ORDER BY C.Numero
+            `);
+            return result.recordset;
+        } catch (error) {
+            console.error('❌ Error al listar consultorios:', error);
+            throw new Error('Error al obtener consultorios');
+        }
+    }
+
+    async crearConsultorio(datos) {
+        let pool;
+        try {
+            pool = await db.connect();
+
+            const existeNumero = await pool.request()
+                .input('num', db.sql.Int, datos.Numero)
+                .query('SELECT 1 FROM Consultorio WHERE Numero = @num');
+
+            if (existeNumero.recordset.length > 0) {
+                throw new Error('Ya existe un consultorio con ese número');
+            }
+
+            const result = await pool.request()
+                .input('num', db.sql.Int, datos.Numero)
+                .input('piso', db.sql.VarChar, datos.Piso)
+                .query(`
+                    INSERT INTO Consultorio (Numero, Piso)
+                    VALUES (@num, @piso);
+                    SELECT SCOPE_IDENTITY() AS Id_Consultorio;
+                `);
+
+            const id = result.recordset[0].Id_Consultorio;
+
+            await pool.request()
+                .input('reg', db.sql.Int, id)
+                .input('usr', db.sql.VarChar, datos.UsuarioRegistro || 'Sistema')
+                .input('det', db.sql.VarChar, `Consultorio creado: ${datos.Numero} (Piso ${datos.Piso})`)
+                .query(`
+                    INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                    VALUES (@reg, GETDATE(), @usr, @det, 'INSERT', 'Consultorio')
+                `);
+
+            return { Id_Consultorio: id, Numero: datos.Numero, Piso: datos.Piso };
+        } catch (error) {
+            console.error('❌ Error al crear consultorio:', error);
+            throw error;
+        }
+    }
+
+    async actualizarConsultorio(idConsultorio, datos) {
+        let pool;
+        try {
+            pool = await db.connect();
+
+            const actual = await pool.request()
+                .input('id', db.sql.Int, idConsultorio)
+                .query('SELECT Numero, Piso FROM Consultorio WHERE Id_Consultorio = @id');
+
+            if (actual.recordset.length === 0) {
+                throw new Error('Consultorio no encontrado');
+            }
+
+            const updates = [];
+            const req = pool.request().input('id', db.sql.Int, idConsultorio);
+
+            if (datos.Numero !== undefined) {
+                updates.push('Numero = @num');
+                req.input('num', db.sql.Int, datos.Numero);
+                const existe = await pool.request()
+                    .input('num', db.sql.Int, datos.Numero)
+                    .input('id', db.sql.Int, idConsultorio)
+                    .query('SELECT 1 FROM Consultorio WHERE Numero = @num AND Id_Consultorio <> @id');
+                if (existe.recordset.length > 0) {
+                    throw new Error('Ya existe un consultorio con ese número');
+                }
+            }
+            if (datos.Piso !== undefined) {
+                updates.push('Piso = @piso');
+                req.input('piso', db.sql.VarChar, datos.Piso);
+            }
+
+            if (updates.length === 0) {
+                throw new Error('No hay campos para actualizar');
+            }
+
+            await req.query(`
+                UPDATE Consultorio
+                SET ${updates.join(', ')}
+                WHERE Id_Consultorio = @id
+            `);
+
+            await pool.request()
+                .input('reg', db.sql.Int, idConsultorio)
+                .input('usr', db.sql.VarChar, datos.UsuarioRegistro || 'Sistema')
+                .input('det', db.sql.VarChar, `Consultorio actualizado - Campos: ${updates.join(', ')}`)
+                .query(`
+                    INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                    VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Consultorio')
+                `);
+
+            return true;
+        } catch (error) {
+            console.error('❌ Error al actualizar consultorio:', error);
+            throw error;
+        }
+    }
+
+    async eliminarConsultorio(idConsultorio, usuario = 'Sistema') {
+        let pool;
+        try {
+            pool = await db.connect();
+
+            const existe = await pool.request()
+                .input('id', db.sql.Int, idConsultorio)
+                .query('SELECT 1 FROM Consultorio WHERE Id_Consultorio = @id');
+
+            if (existe.recordset.length === 0) {
+                throw new Error('Consultorio no encontrado');
+            }
+
+            const asignado = await pool.request()
+                .input('id', db.sql.Int, idConsultorio)
+                .query('SELECT TOP 1 1 FROM Especialidades WHERE ID_Consultorio = @id');
+
+            if (asignado.recordset.length > 0) {
+                throw new Error('No se puede eliminar: consultorio asignado a una especialidad');
+            }
+
+            await pool.request()
+                .input('id', db.sql.Int, idConsultorio)
+                .query('DELETE FROM Consultorio WHERE Id_Consultorio = @id');
+
+            await pool.request()
+                .input('reg', db.sql.Int, idConsultorio)
+                .input('usr', db.sql.VarChar, usuario)
+                .input('det', db.sql.VarChar, 'Consultorio eliminado')
+                .query(`
+                    INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                    VALUES (@reg, GETDATE(), @usr, @det, 'DELETE', 'Consultorio')
+                `);
+
+            return true;
+        } catch (error) {
+            console.error('❌ Error al eliminar consultorio:', error);
+            throw error;
+        }
+    }
+
+    // ==================== ESPECIALIDADES ====================
+
+    async listarEspecialidades() {
+        let pool;
+        try {
+            pool = await db.connect();
+            const result = await pool.request().query(`
+                SELECT 
+                    E.Id_Especialidad,
+                    E.Nombre,
+                    E.Grado,
+                    E.Precio,
+                    E.ID_Consultorio,
+                    C.Numero AS ConsultorioNumero,
+                    C.Piso AS ConsultorioPiso,
+                    ISNULL(COUNT(D.Id_Doctor), 0) AS DoctoresAsignados
+                FROM Especialidades E
+                LEFT JOIN Consultorio C ON C.Id_Consultorio = E.ID_Consultorio
+                LEFT JOIN Doctores D ON D.Id_Especialidad = E.Id_Especialidad
+                GROUP BY E.Id_Especialidad, E.Nombre, E.Grado, E.Precio, E.ID_Consultorio, C.Numero, C.Piso
+                ORDER BY E.Nombre
+            `);
+            return result.recordset;
+        } catch (error) {
+            console.error('❌ Error al listar especialidades:', error);
+            throw new Error('Error al obtener especialidades');
+        }
+    }
+
+    async crearEspecialidad(datos) {
+        let pool;
+        try {
+            pool = await db.connect();
+
+            const existeConsultorio = await pool.request()
+                .input('cons', db.sql.Int, datos.ID_Consultorio)
+                .query('SELECT 1 FROM Consultorio WHERE Id_Consultorio = @cons');
+            if (existeConsultorio.recordset.length === 0) {
+                throw new Error('Consultorio no encontrado');
+            }
+
+            const consultorioOcupado = await pool.request()
+                .input('cons', db.sql.Int, datos.ID_Consultorio)
+                .query('SELECT TOP 1 1 FROM Especialidades WHERE ID_Consultorio = @cons');
+            if (consultorioOcupado.recordset.length > 0) {
+                throw new Error('El consultorio ya está asignado a otra especialidad');
+            }
+
+            const result = await pool.request()
+                .input('nombre', db.sql.VarChar, datos.Nombre)
+                .input('grado', db.sql.VarChar, datos.Grado)
+                .input('precio', db.sql.Decimal(10, 2), datos.Precio)
+                .input('cons', db.sql.Int, datos.ID_Consultorio)
+                .query(`
+                    INSERT INTO Especialidades (Nombre, Grado, Precio, ID_Consultorio)
+                    VALUES (@nombre, @grado, @precio, @cons);
+                    SELECT SCOPE_IDENTITY() AS Id_Especialidad;
+                `);
+
+            const id = result.recordset[0].Id_Especialidad;
+
+            await pool.request()
+                .input('reg', db.sql.Int, id)
+                .input('usr', db.sql.VarChar, datos.UsuarioRegistro || 'Sistema')
+                .input('det', db.sql.VarChar, `Especialidad creada: ${datos.Nombre} (Grado ${datos.Grado})`)
+                .query(`
+                    INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                    VALUES (@reg, GETDATE(), @usr, @det, 'INSERT', 'Especialidades')
+                `);
+
+            return { Id_Especialidad: id };
+        } catch (error) {
+            console.error('❌ Error al crear especialidad:', error);
+            throw error;
+        }
+    }
+
+    async actualizarEspecialidad(idEspecialidad, datos) {
+        let pool;
+        try {
+            pool = await db.connect();
+
+            const existe = await pool.request()
+                .input('id', db.sql.Int, idEspecialidad)
+                .query('SELECT 1 FROM Especialidades WHERE Id_Especialidad = @id');
+
+            if (existe.recordset.length === 0) {
+                throw new Error('Especialidad no encontrada');
+            }
+
+            const updates = [];
+            const req = pool.request().input('id', db.sql.Int, idEspecialidad);
+
+            if (datos.Nombre !== undefined) {
+                updates.push('Nombre = @nombre');
+                req.input('nombre', db.sql.VarChar, datos.Nombre);
+            }
+            if (datos.Grado !== undefined) {
+                updates.push('Grado = @grado');
+                req.input('grado', db.sql.VarChar, datos.Grado);
+            }
+            if (datos.Precio !== undefined) {
+                updates.push('Precio = @precio');
+                req.input('precio', db.sql.Decimal(10, 2), datos.Precio);
+            }
+            if (datos.ID_Consultorio !== undefined) {
+                const existeCons = await pool.request()
+                    .input('cons', db.sql.Int, datos.ID_Consultorio)
+                    .query('SELECT 1 FROM Consultorio WHERE Id_Consultorio = @cons');
+                if (existeCons.recordset.length === 0) {
+                    throw new Error('Consultorio no encontrado');
+                }
+
+                const ocupado = await pool.request()
+                    .input('cons', db.sql.Int, datos.ID_Consultorio)
+                    .input('id', db.sql.Int, idEspecialidad)
+                    .query('SELECT TOP 1 1 FROM Especialidades WHERE ID_Consultorio = @cons AND Id_Especialidad <> @id');
+                if (ocupado.recordset.length > 0) {
+                    throw new Error('El consultorio ya está asignado a otra especialidad');
+                }
+
+                updates.push('ID_Consultorio = @cons');
+                req.input('cons', db.sql.Int, datos.ID_Consultorio);
+            }
+
+            if (updates.length === 0) {
+                throw new Error('No hay campos para actualizar');
+            }
+
+            await req.query(`
+                UPDATE Especialidades
+                SET ${updates.join(', ')}
+                WHERE Id_Especialidad = @id
+            `);
+
+            await pool.request()
+                .input('reg', db.sql.Int, idEspecialidad)
+                .input('usr', db.sql.VarChar, datos.UsuarioRegistro || 'Sistema')
+                .input('det', db.sql.VarChar, `Especialidad actualizada - Campos: ${updates.join(', ')}`)
+                .query(`
+                    INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                    VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Especialidades')
+                `);
+
+            return true;
+        } catch (error) {
+            console.error('❌ Error al actualizar especialidad:', error);
+            throw error;
+        }
+    }
+
+    async eliminarEspecialidad(idEspecialidad, usuario = 'Sistema') {
+        let pool;
+        try {
+            pool = await db.connect();
+
+            const existe = await pool.request()
+                .input('id', db.sql.Int, idEspecialidad)
+                .query('SELECT 1 FROM Especialidades WHERE Id_Especialidad = @id');
+            if (existe.recordset.length === 0) {
+                throw new Error('Especialidad no encontrada');
+            }
+
+            const tieneDoctores = await pool.request()
+                .input('id', db.sql.Int, idEspecialidad)
+                .query('SELECT TOP 1 1 FROM Doctores WHERE Id_Especialidad = @id');
+            if (tieneDoctores.recordset.length > 0) {
+                throw new Error('No se puede eliminar: especialidad con doctores asignados');
+            }
+
+            await pool.request()
+                .input('id', db.sql.Int, idEspecialidad)
+                .query('DELETE FROM Especialidades WHERE Id_Especialidad = @id');
+
+            await pool.request()
+                .input('reg', db.sql.Int, idEspecialidad)
+                .input('usr', db.sql.VarChar, usuario)
+                .input('det', db.sql.VarChar, 'Especialidad eliminada')
+                .query(`
+                    INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                    VALUES (@reg, GETDATE(), @usr, @det, 'DELETE', 'Especialidades')
+                `);
+
+            return true;
+        } catch (error) {
+            console.error('❌ Error al eliminar especialidad:', error);
+            throw error;
+        }
+    }
+
     // ==================== RECEPCIONISTAS ====================
 
     async listarRecepcionistas(filtros = {}) {

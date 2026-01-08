@@ -312,6 +312,189 @@ exports.darDeBajaDoctor = async (req, res) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// GESTIÓN DE CONSULTORIOS
+// ═══════════════════════════════════════════════════════════════
+
+exports.listarConsultorios = async (_req, res) => {
+    try {
+        const consultorios = await recepcionService.listarConsultorios();
+        return res.json({ success: true, total: consultorios.length, consultorios });
+    } catch (error) {
+        console.error('❌ Error GET /api/recepcion/consultorios:', error);
+        return res.status(500).json({ message: 'Error al obtener consultorios', details: error.message });
+    }
+};
+
+exports.crearConsultorio = async (req, res) => {
+    try {
+        const { Numero, Piso } = req.body;
+        if (!Numero || isNaN(parseInt(Numero, 10))) {
+            return res.status(400).json({ message: 'Numero de consultorio inválido' });
+        }
+        if (!Piso && Piso !== 0) {
+            return res.status(400).json({ message: 'Piso es obligatorio' });
+        }
+
+        const resultado = await recepcionService.crearConsultorio({
+            Numero: parseInt(Numero, 10),
+            Piso,
+            UsuarioRegistro: `Recepcionista_${req.headers['x-user-id'] || 'N/A'}`
+        });
+
+        return res.status(201).json({ success: true, message: 'Consultorio creado', consultorio: resultado });
+    } catch (error) {
+        console.error('❌ Error POST /api/recepcion/consultorios:', error);
+        let status = 500;
+        if (error.message && error.message.toLowerCase().includes('existe')) status = 409;
+        return res.status(status).json({ message: error.message });
+    }
+};
+
+exports.actualizarConsultorio = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (isNaN(id)) return res.status(400).json({ message: 'ID de consultorio inválido' });
+
+        const datos = { ...req.body };
+        if (datos.Numero !== undefined && isNaN(parseInt(datos.Numero, 10))) {
+            return res.status(400).json({ message: 'Numero de consultorio inválido' });
+        }
+
+        await recepcionService.actualizarConsultorio(id, {
+            Numero: datos.Numero !== undefined ? parseInt(datos.Numero, 10) : undefined,
+            Piso: datos.Piso,
+            UsuarioRegistro: `Recepcionista_${req.headers['x-user-id'] || 'N/A'}`
+        });
+
+        return res.json({ success: true, message: 'Consultorio actualizado' });
+    } catch (error) {
+        console.error('❌ Error PUT /api/recepcion/consultorios/:id:', error);
+        let status = 500;
+        if (error.message === 'Consultorio no encontrado') status = 404;
+        else if (error.message.toLowerCase().includes('no hay campos')) status = 400;
+        else if (error.message.toLowerCase().includes('existe')) status = 409;
+        return res.status(status).json({ message: error.message });
+    }
+};
+
+exports.eliminarConsultorio = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (isNaN(id)) return res.status(400).json({ message: 'ID de consultorio inválido' });
+
+        await recepcionService.eliminarConsultorio(id, `Recepcionista_${req.headers['x-user-id'] || 'N/A'}`);
+        return res.json({ success: true, message: 'Consultorio eliminado' });
+    } catch (error) {
+        console.error('❌ Error DELETE /api/recepcion/consultorios/:id:', error);
+        let status = 500;
+        if (error.message === 'Consultorio no encontrado') status = 404;
+        else if (error.message.toLowerCase().includes('asignado')) status = 409;
+        return res.status(status).json({ message: error.message });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// GESTIÓN DE ESPECIALIDADES
+// ═══════════════════════════════════════════════════════════════
+
+exports.listarEspecialidades = async (_req, res) => {
+    try {
+        const especialidades = await recepcionService.listarEspecialidades();
+        return res.json({ success: true, total: especialidades.length, especialidades });
+    } catch (error) {
+        console.error('❌ Error GET /api/recepcion/especialidades:', error);
+        return res.status(500).json({ message: 'Error al obtener especialidades', details: error.message });
+    }
+};
+
+exports.crearEspecialidad = async (req, res) => {
+    try {
+        const { Nombre, Grado, Precio, ID_Consultorio } = req.body;
+        if (!Nombre || !Grado || Precio === undefined || Precio === null) {
+            return res.status(400).json({ message: 'Nombre, Grado, Precio e ID_Consultorio son obligatorios' });
+        }
+        const precioNum = Number(Precio);
+        if (Number.isNaN(precioNum) || precioNum < 0) {
+            return res.status(400).json({ message: 'Precio inválido' });
+        }
+        const consultorioId = parseInt(ID_Consultorio, 10);
+        if (isNaN(consultorioId)) {
+            return res.status(400).json({ message: 'ID_Consultorio inválido' });
+        }
+
+        const resultado = await recepcionService.crearEspecialidad({
+            Nombre,
+            Grado,
+            Precio: precioNum,
+            ID_Consultorio: consultorioId,
+            UsuarioRegistro: `Recepcionista_${req.headers['x-user-id'] || 'N/A'}`
+        });
+
+        return res.status(201).json({ success: true, message: 'Especialidad creada', especialidad: resultado });
+    } catch (error) {
+        console.error('❌ Error POST /api/recepcion/especialidades:', error);
+        let status = 500;
+        if (error.message.toLowerCase().includes('consultorio')) status = 400;
+        if (error.message.toLowerCase().includes('ocupado') || error.message.toLowerCase().includes('existe')) status = 409;
+        return res.status(status).json({ message: error.message });
+    }
+};
+
+exports.actualizarEspecialidad = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (isNaN(id)) return res.status(400).json({ message: 'ID de especialidad inválido' });
+
+        const datos = { ...req.body };
+        if (datos.Precio !== undefined) {
+            const precioNum = Number(datos.Precio);
+            if (Number.isNaN(precioNum) || precioNum < 0) {
+                return res.status(400).json({ message: 'Precio inválido' });
+            }
+            datos.Precio = precioNum;
+        }
+
+        if (datos.ID_Consultorio !== undefined) {
+            const consultorioId = parseInt(datos.ID_Consultorio, 10);
+            if (isNaN(consultorioId)) {
+                return res.status(400).json({ message: 'ID_Consultorio inválido' });
+            }
+            datos.ID_Consultorio = consultorioId;
+        }
+
+        await recepcionService.actualizarEspecialidad(id, {
+            ...datos,
+            UsuarioRegistro: `Recepcionista_${req.headers['x-user-id'] || 'N/A'}`
+        });
+
+        return res.json({ success: true, message: 'Especialidad actualizada' });
+    } catch (error) {
+        console.error('❌ Error PUT /api/recepcion/especialidades/:id:', error);
+        let status = 500;
+        if (error.message === 'Especialidad no encontrada') status = 404;
+        else if (error.message.toLowerCase().includes('no hay campos')) status = 400;
+        else if (error.message.toLowerCase().includes('consultorio') || error.message.toLowerCase().includes('ocupado') || error.message.toLowerCase().includes('existe')) status = 409;
+        return res.status(status).json({ message: error.message });
+    }
+};
+
+exports.eliminarEspecialidad = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (isNaN(id)) return res.status(400).json({ message: 'ID de especialidad inválido' });
+
+        await recepcionService.eliminarEspecialidad(id, `Recepcionista_${req.headers['x-user-id'] || 'N/A'}`);
+        return res.json({ success: true, message: 'Especialidad eliminada' });
+    } catch (error) {
+        console.error('❌ Error DELETE /api/recepcion/especialidades/:id:', error);
+        let status = 500;
+        if (error.message === 'Especialidad no encontrada') status = 404;
+        else if (error.message.toLowerCase().includes('doctor') || error.message.toLowerCase().includes('asignado')) status = 409;
+        return res.status(status).json({ message: error.message });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
 // HORARIO DE DOCTOR
 // ═══════════════════════════════════════════════════════════════
 

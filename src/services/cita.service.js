@@ -6,6 +6,7 @@ class CitaService {
     async crearCita(datosCita) {
         const { Id_Doctor, Id_Paciente, Fecha_Cita, Hora_Inicio, Hora_Fin, Usuario } = datosCita;
         let pool;
+        let tx;
         try {
             pool = await db.connect();
 
@@ -14,19 +15,24 @@ class CitaService {
             if (!fechaRegex.test(Fecha_Cita)) throw new Error('Formato de fecha inválido. Debe ser YYYY-MM-DD');
             if (!horaRegex.test(Hora_Inicio) || !horaRegex.test(Hora_Fin)) throw new Error('Formato de hora inválido. Debe ser HH:MM o HH:MM:SS');
 
-            // Set language to Spanish for the entire SP execution
-            await pool.request().query('SET LANGUAGE Spanish');
+            // Ejecutar SET LANGUAGE y SP en la MISMA conexión usando una transacción
+            tx = new db.sql.Transaction(pool);
+            await tx.begin();
+            const request = new db.sql.Request(tx);
+            await request.query('SET LANGUAGE Spanish');
 
-            // Llamar al SP CrearCita
-            const request = pool.request()
+            // Limpiar inputs del request anterior y volver a setearlos
+            const execReq = new db.sql.Request(tx);
+            execReq
                 .input('Id_Doctor', db.sql.Int, Id_Doctor)
                 .input('Id_Paciente', db.sql.Int, Id_Paciente)
-                .input('Fecha_Cita', db.sql.VarChar(10), Fecha_Cita)   // el SP acepta VARCHAR(10)
-                .input('Hora_Inicio', db.sql.VarChar(8), Hora_Inicio)  // el SP acepta VARCHAR(8)
+                .input('Fecha_Cita', db.sql.VarChar(10), Fecha_Cita)
+                .input('Hora_Inicio', db.sql.VarChar(8), Hora_Inicio)
                 .input('Hora_Fin', db.sql.VarChar(8), Hora_Fin)
                 .input('Usuario', db.sql.VarChar(50), Usuario);
 
-            const result = await request.execute('CrearCita');
+            const result = await execReq.execute('CrearCita');
+            await tx.commit();
 
             // El procedimiento devuelve un mensaje
             const mensaje = (result.recordset && result.recordset[0] && result.recordset[0].Mensaje)
@@ -41,6 +47,9 @@ class CitaService {
         } finally {
             // No cerrar el pool - es global y se reutiliza
             // if (pool) pool.close();
+            if (tx && tx._aborted !== true && tx._state === 'started') {
+                try { await tx.rollback(); } catch {}
+            }
         }
     }
 
@@ -79,16 +88,39 @@ class CitaService {
         let pool;
         try {
             pool = await db.connect();
-            // Asumiendo que quieres todas las especialidades disponibles con doctores
+            // Obtener especialidades únicas (agrupar por nombre para evitar duplicados)
+            // que tengan al menos un doctor disponible
             const result = await pool.request().query(`
-                SELECT DISTINCT ES.Id_Especialidad, ES.Nombre 
+                SELECT MIN(ES.Id_Especialidad) AS Id_Especialidad, ES.Nombre 
                 FROM Especialidades ES
-                JOIN Doctores D ON ES.Id_Especialidad = D.Id_Especialidad
+                INNER JOIN Doctores D ON ES.Id_Especialidad = D.Id_Especialidad
+                GROUP BY ES.Nombre
                 ORDER BY ES.Nombre
             `);
             return result.recordset;
         } catch (error) {
-            console.error('Error detallado en obtenerEspecialidadeeees:', error.message);
+            console.error('Error en obtenerEspecialidades:', error.message);
+            throw new Error('Error al obtener especialidades.');
+        } finally {
+            if (pool) pool.close();
+        }
+    }
+
+    async obtenerEspecialidadesAll() {
+        let pool;
+        try {
+            pool = await db.connect();
+            // Obtener TODAS las especialidades disponibles (sin filtro de doctores)
+            // agrupadas por nombre para evitar duplicados
+            const result = await pool.request().query(`
+                SELECT MIN(ES.Id_Especialidad) AS Id_Especialidad, ES.Nombre 
+                FROM Especialidades ES
+                GROUP BY ES.Nombre
+                ORDER BY ES.Nombre
+            `);
+            return result.recordset;
+        } catch (error) {
+            console.error('Error en obtenerEspecialidadesAll:', error.message);
             throw new Error('Error al obtener especialidades.');
         } finally {
             if (pool) pool.close();
@@ -151,15 +183,22 @@ class CitaService {
         let pool;
         try {
             pool = await db.connect();
-            
             console.log('ID Doctor:', id_doctor, 'Fecha:', fecha);
-            const diaSemana = await pool.request()
-                .input('Fecha', db.sql.Date, fecha)
-                .query(`SELECT DATENAME(DW, @Fecha) AS DiaSemana`);
             
-            // SQL Server ya retorna el día en español (idioma configurado)
-            const diaSemanaEspañol = diaSemana.recordset[0].DiaSemana;
-
+            // Parsear la fecha en formato YYYY-MM-DD sin problemas de timezone UTC
+            // getDay() retorna 0=Domingo, 1=Lunes, ..., 6=Sábado
+            const [year, month, day] = fecha.split('-').map(Number);
+            const fechaObj = new Date(year, month - 1, day); // month es 0-indexed en JavaScript
+            if (isNaN(fechaObj.getTime())) {
+                throw new Error(`Fecha inválida: ${fecha}`);
+            }
+            
+            const dayIndex = fechaObj.getDay();
+            const diasEspañol = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const diaSemanaEspañol = diasEspañol[dayIndex];
+            
+            console.log('Fecha parseada:', `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+            console.log('Día de la semana (índice dayIndex):', dayIndex);
             console.log('Día de la semana obtenido:', diaSemanaEspañol);
 
             const result = await pool.request()
@@ -168,7 +207,8 @@ class CitaService {
                 .query(`
                     SELECT     
                         CONVERT(VARCHAR(8), H.Hora_Inicio, 108) AS Hora_Inicio,
-                        CONVERT(VARCHAR(8), H.Hora_Fin, 108) AS Hora_Fin
+                        CONVERT(VARCHAR(8), H.Hora_Fin, 108) AS Hora_Fin,
+                        H.Dia_Semana AS Dia_Registrado
                     FROM Doctores D
                     JOIN Empleados E ON E.Id_Empleado = D.Id_Empleado
                     JOIN Empleado_Horario EH ON EH.Id_Empleado = E.Id_Empleado
@@ -180,6 +220,7 @@ class CitaService {
                 `);
 
             console.log('Horas de trabajo:', result.recordset);
+            console.log('Número de registros encontrados:', result.recordset.length);
             
             return result.recordset;
         } catch (error) {

@@ -9,7 +9,8 @@ const config = {
     options: {
         encrypt: false, 
         trustServerCertificate: true,
-        language: 'Spanish'
+        language: 'Spanish',
+        useUTC: false // Mantener fechas/horas en zona local para evitar desfase en bitácoras
     }
 };
 

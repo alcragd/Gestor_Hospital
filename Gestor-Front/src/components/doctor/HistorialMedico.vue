@@ -30,7 +30,7 @@
               class="nav-link" 
               :class="{ active: tabActivo === 'citas' }"
               @click="tabActivo = 'citas'">
-              📋 Citas Anteriores
+              Citas Anteriores
             </button>
           </li>
           <li class="nav-item" role="presentation">
@@ -38,7 +38,7 @@
               class="nav-link"
               :class="{ active: tabActivo === 'recetas' }"
               @click="tabActivo = 'recetas'">
-              💊 Recetas Emitidas
+              Recetas Emitidas
             </button>
           </li>
           <li class="nav-item" role="presentation">

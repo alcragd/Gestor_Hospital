@@ -25,11 +25,9 @@
           type="text">
         <select v-model="filtroEspecialidad" @change="buscarDoctores">
           <option value="">Todas las especialidades</option>
-          <option value="1">Cardiología</option>
-          <option value="2">Pediatría</option>
-          <option value="3">Dermatología</option>
-          <option value="4">Neurología</option>
-          <option value="5">Oftalmología</option>
+          <option v-for="esp in especialidades" :key="esp.Id_Especialidad" :value="esp.Id_Especialidad">
+            {{ esp.Nombre }}
+          </option>
         </select>
       </div>
 
@@ -141,11 +139,9 @@
                 <label>Especialidad</label>
                 <select v-model="formEditar.Id_Especialidad">
                   <option value="">Seleccionar...</option>
-                  <option value="1">Cardiología</option>
-                  <option value="2">Pediatría</option>
-                  <option value="3">Dermatología</option>
-                  <option value="4">Neurología</option>
-                  <option value="5">Oftalmología</option>
+                  <option v-for="esp in especialidades" :key="esp.Id_Especialidad" :value="esp.Id_Especialidad">
+                    {{ esp.Nombre }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -200,8 +196,8 @@
                 </thead>
                 <tbody>
                   <tr v-for="(r, idx) in horarioRangos" :key="idx">
-                    <td>{{ r.Hora_Inicio }}</td>
-                    <td>{{ r.Hora_Fin }}</td>
+                    <td>{{ formatTime(r.Hora_Inicio) }}</td>
+                    <td>{{ formatTime(r.Hora_Fin) }}</td>
                     <td><button class="btn-danger" @click="eliminarBloque(idx)">Eliminar</button></td>
                   </tr>
                 </tbody>
@@ -309,11 +305,9 @@
             <label>Especialidad *</label>
             <select v-model="formNuevo.Id_Especialidad" required>
               <option value="">Seleccionar...</option>
-              <option value="1">Cardiología</option>
-              <option value="2">Pediatría</option>
-              <option value="3">Dermatología</option>
-              <option value="4">Neurología</option>
-              <option value="5">Oftalmología</option>
+              <option v-for="esp in especialidades" :key="esp.Id_Especialidad" :value="esp.Id_Especialidad">
+                {{ esp.Nombre }}
+              </option>
             </select>
           </div>
         </div>
@@ -355,6 +349,7 @@ export default {
     return {
       tab: 'listar',
       doctores: [],
+      especialidades: [],
       doctorSeleccionado: null,
       doctorEditando: null,
       busqueda: '',
@@ -406,6 +401,7 @@ export default {
   },
   mounted() {
     this.cargarDoctores();
+    this.cargarEspecialidades();
   },
   methods: {
     calcularEdadNuevo() {
@@ -418,6 +414,17 @@ export default {
         age--;
       }
       this.formNuevo.Edad = age;
+    },
+    formatTime(val) {
+      if (!val) return '';
+      if (typeof val === 'string' && val.includes('T')) {
+        const [, time] = val.split('T');
+        return time ? time.slice(0, 5) : '';
+      }
+      if (typeof val === 'string' && val.length >= 5) return val.slice(0, 5);
+      const d = new Date(val);
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toISOString().slice(11, 16);
     },
     async cargarDoctores() {
       this.loading = true;
@@ -439,6 +446,15 @@ export default {
         this.mensajeError = 'Error en búsqueda: ' + error.message;
       } finally {
         this.loading = false;
+      }
+    },
+    async cargarEspecialidades() {
+      try {
+        const data = await CitaService.getEspecialidadesAll();
+        this.especialidades = Array.isArray(data) ? data : (data.data || data.result || []);
+      } catch (error) {
+        console.error('Error al cargar especialidades:', error);
+        this.especialidades = [];
       }
     },
     verDetalles(doctor) {
@@ -647,6 +663,13 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  min-width: 980px;
+}
+
+@media (max-width: 980px) {
+  .gestion-doctores {
+    min-width: auto;
+  }
 }
 
 h2 {

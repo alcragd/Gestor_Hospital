@@ -26,6 +26,12 @@ class CancelacionService {
     if (!res.ok) throw new Error('Error al calcular reembolso');
     return res.json();
   }
+
+  async reembolsosPaciente(idPaciente) {
+    const res = await fetch(`${API_URL}/reembolsos/${idPaciente}`);
+    if (!res.ok) throw new Error('Error al obtener reembolsos');
+    return res.json();
+  }
 }
 
 export default new CancelacionService();

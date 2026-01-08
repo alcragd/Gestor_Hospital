@@ -192,23 +192,49 @@ router.get('/historial/:idPaciente', async (req, res) => {
         let pool = await db.connect();
         const request = pool.request()
             .input('idPaciente', db.sql.Int, idPaciente);
-        
+
         if (desde) {
-            request.input('fechaDesde', db.sql.DateTime2, desde);
+            request.input('fechaDesde', db.sql.DateTime2, new Date(desde));
         }
         if (hasta) {
-            request.input('fechaHasta', db.sql.DateTime2, hasta);
+            request.input('fechaHasta', db.sql.DateTime2, new Date(hasta));
         }
-        
-        const result = await request.execute('SP_Consultar_Bitacora_Historial_Paciente');
-        
+
+        const query = `
+            SELECT 
+                B.Id_Bitacora,
+                B.Id_Cita,
+                C.Fecha_cita,
+                C.Hora_Inicio,
+                CONCAT(EMD.Nombre, ' ', EMD.Paterno, ' ', ISNULL(EMD.Materno, '')) AS Doctor_Atencion,
+                ESP.Nombre AS Especialidad,
+                B.Usuario_Acceso,
+                B.Nombre_Usuario,
+                B.Rol_Usuario,
+                B.Tipo_Accion,
+                B.Fecha_Accion,
+                B.Id_Receta,
+                B.Detalles,
+                B.IP_Origen
+            FROM Bitacora_Historial_Medico B
+            LEFT JOIN Citas C ON B.Id_Cita = C.Id_Cita
+            LEFT JOIN Doctores D ON C.Id_Doc = D.Id_Doctor
+            LEFT JOIN Empleados EMD ON D.Id_Empleado = EMD.Id_Empleado
+            LEFT JOIN Especialidades ESP ON D.Id_Especialidad = ESP.Id_Especialidad
+            WHERE B.Id_Paciente = @idPaciente
+            ${desde ? 'AND B.Fecha_Accion >= @fechaDesde' : ''}
+            ${hasta ? 'AND B.Fecha_Accion <= @fechaHasta' : ''}
+            ORDER BY B.Fecha_Accion DESC`;
+
+        const result = await request.query(query);
+
         res.json({
             success: true,
             id_paciente: idPaciente,
             total_accesos: result.recordset.length,
             accesos: result.recordset
         });
-        
+
     } catch (error) {
         console.error(`❌ Error GET /api/bitacoras/historial/${req.params.idPaciente}:`, error);
         res.status(500).json({

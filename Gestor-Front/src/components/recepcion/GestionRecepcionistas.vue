@@ -447,6 +447,13 @@ export default {
 <style scoped>
 .gestion-recepcionistas {
   padding: 20px;
+  min-width: 980px;
+}
+
+@media (max-width: 980px) {
+  .gestion-recepcionistas {
+    min-width: auto;
+  }
 }
 
 h2 {

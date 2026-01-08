@@ -40,10 +40,17 @@ class CitaService {
                 },
                 body: JSON.stringify({ Id_Doctor, Fecha_Cita, Hora_Inicio, Hora_Fin })
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || errorData.message || 'Error al agendar la cita');
-            }
+                        if (!response.ok) {
+                                let payloadText = await response.text();
+                                let errorData;
+                                try { errorData = JSON.parse(payloadText); } catch { errorData = { message: payloadText }; }
+                                const composed = errorData.detalles
+                                    ? `${errorData.message || 'Error al agendar la cita'} - ${JSON.stringify(errorData.detalles)}`
+                                    : (errorData.details || errorData.message || 'Error al agendar la cita');
+                                const err = new Error(composed);
+                                err.payload = errorData;
+                                throw err;
+                        }
             return await response.json();
         } catch (error) {
             console.error('Error en CitaService.agendarCitaAutenticado:', error);
@@ -54,7 +61,13 @@ class CitaService {
 
     async getEspecialidades() {
         const response = await fetch(`${API_URL}/especialidades`);
-        if (!response.ok) throw new Error('Error al cargar especialidades--.');
+        if (!response.ok) throw new Error('Error al cargar especialidades.');
+        return response.json();
+    }
+
+    async getEspecialidadesAll() {
+        const response = await fetch(`${API_URL}/especialidades-todas`);
+        if (!response.ok) throw new Error('Error al cargar especialidades.');
         return response.json();
     }
     
@@ -141,6 +154,24 @@ class CitaService {
         if (!response.ok) {
             const err = await response.json();
             throw new Error(err.message || 'Error al marcar cita atendida');
+        }
+        return response.json();
+    }
+
+    // Doctor marca cita como "No Acudió"
+    async marcarNoAsistio(idCita){
+        const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('idUser');
+        const response = await fetch(`http://localhost:3000/api/doctores/mis-citas/${idCita}/marcar-no-asistencia`, {
+            method: 'POST',
+            headers: {
+                'x-user-role': userRole,
+                'x-user-id': userId
+            }
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || 'Error al marcar cita como No Acudió');
         }
         return response.json();
     }

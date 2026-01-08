@@ -860,4 +860,225 @@ exports.cancelarCita = async (req, res) => {
     }
 };
 
+// ═══════════════════════════════════════════════════════════════
+// HISTORIAL DE VENTAS
+// ═══════════════════════════════════════════════════════════════
+
+exports.obtenerHistorialVentas = async (req, res) => {
+    try {
+        const { fechaInicio, fechaFin, tipo } = req.query;
+        const ventas = await recepcionService.obtenerHistorialVentas({ fechaInicio, fechaFin, tipo });
+        
+        res.json({
+            success: true,
+            total: ventas.length,
+            ventas
+        });
+    } catch (error) {
+        console.error('❌ Error GET /api/recepcion/ventas/historial:', error);
+        res.status(500).json({
+            message: 'Error al obtener historial de ventas',
+            details: error.message
+        });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// GESTIÓN DE MEDICAMENTOS
+// ═══════════════════════════════════════════════════════════════
+
+exports.crearMedicamento = async (req, res) => {
+    try {
+        const { Nombre, Presentacion, Dosis, Precio, Stock, Stock_Minimo } = req.body;
+        
+        if (!Nombre || !Presentacion || !Dosis || Precio === undefined) {
+            return res.status(400).json({ message: 'Faltan campos obligatorios: Nombre, Presentacion, Dosis, Precio' });
+        }
+        
+        const medicamento = await recepcionService.crearMedicamento({
+            Nombre,
+            Presentacion,
+            Dosis,
+            Precio,
+            Stock: Stock || 0,
+            Stock_Minimo: Stock_Minimo || 0
+        });
+        
+        res.status(201).json({
+            success: true,
+            message: 'Medicamento creado exitosamente',
+            medicamento
+        });
+    } catch (error) {
+        console.error('❌ Error POST /api/recepcion/medicamentos:', error);
+        res.status(500).json({
+            message: 'Error al crear medicamento',
+            details: error.message
+        });
+    }
+};
+
+exports.actualizarMedicamento = async (req, res) => {
+    try {
+        const idMedicamento = parseInt(req.params.id, 10);
+        
+        if (isNaN(idMedicamento)) {
+            return res.status(400).json({ message: 'ID de medicamento inválido' });
+        }
+        
+        const { Nombre, Presentacion, Dosis, Precio, Stock, Stock_Minimo } = req.body;
+        
+        const medicamento = await recepcionService.actualizarMedicamento(idMedicamento, {
+            Nombre,
+            Presentacion,
+            Dosis,
+            Precio,
+            Stock,
+            Stock_Minimo
+        });
+        
+        res.json({
+            success: true,
+            message: 'Medicamento actualizado exitosamente',
+            medicamento
+        });
+    } catch (error) {
+        console.error('❌ Error PUT /api/recepcion/medicamentos/:id:', error);
+        
+        if (error.message === 'Medicamento no encontrado') {
+            return res.status(404).json({ message: error.message });
+        }
+        
+        res.status(500).json({
+            message: 'Error al actualizar medicamento',
+            details: error.message
+        });
+    }
+};
+
+exports.eliminarMedicamento = async (req, res) => {
+    try {
+        const idMedicamento = parseInt(req.params.id, 10);
+        
+        if (isNaN(idMedicamento)) {
+            return res.status(400).json({ message: 'ID de medicamento inválido' });
+        }
+        
+        await recepcionService.eliminarMedicamento(idMedicamento);
+        
+        res.json({
+            success: true,
+            message: 'Medicamento eliminado exitosamente'
+        });
+    } catch (error) {
+        console.error('❌ Error DELETE /api/recepcion/medicamentos/:id:', error);
+        
+        if (error.message === 'Medicamento no encontrado') {
+            return res.status(404).json({ message: error.message });
+        }
+        
+        res.status(500).json({
+            message: 'Error al eliminar medicamento',
+            details: error.message
+        });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// GESTIÓN DE SERVICIOS
+// ═══════════════════════════════════════════════════════════════
+
+exports.crearServicio = async (req, res) => {
+    try {
+        const { Nombre, Descripcion, Precio, Disponible } = req.body;
+        
+        if (!Nombre || !Descripcion || Precio === undefined) {
+            return res.status(400).json({ message: 'Faltan campos obligatorios: Nombre, Descripcion, Precio' });
+        }
+        
+        const servicio = await recepcionService.crearServicio({
+            Nombre,
+            Descripcion,
+            Precio,
+            Disponible: Disponible !== undefined ? Disponible : true
+        });
+        
+        res.status(201).json({
+            success: true,
+            message: 'Servicio creado exitosamente',
+            servicio
+        });
+    } catch (error) {
+        console.error('❌ Error POST /api/recepcion/servicios:', error);
+        res.status(500).json({
+            message: 'Error al crear servicio',
+            details: error.message
+        });
+    }
+};
+
+exports.actualizarServicio = async (req, res) => {
+    try {
+        const idServicio = parseInt(req.params.id, 10);
+        
+        if (isNaN(idServicio)) {
+            return res.status(400).json({ message: 'ID de servicio inválido' });
+        }
+        
+        const { Nombre, Descripcion, Precio, Disponible } = req.body;
+        
+        const servicio = await recepcionService.actualizarServicio(idServicio, {
+            Nombre,
+            Descripcion,
+            Precio,
+            Disponible
+        });
+        
+        res.json({
+            success: true,
+            message: 'Servicio actualizado exitosamente',
+            servicio
+        });
+    } catch (error) {
+        console.error('❌ Error PUT /api/recepcion/servicios/:id:', error);
+        
+        if (error.message === 'Servicio no encontrado') {
+            return res.status(404).json({ message: error.message });
+        }
+        
+        res.status(500).json({
+            message: 'Error al actualizar servicio',
+            details: error.message
+        });
+    }
+};
+
+exports.eliminarServicio = async (req, res) => {
+    try {
+        const idServicio = parseInt(req.params.id, 10);
+        
+        if (isNaN(idServicio)) {
+            return res.status(400).json({ message: 'ID de servicio inválido' });
+        }
+        
+        await recepcionService.eliminarServicio(idServicio);
+        
+        res.json({
+            success: true,
+            message: 'Servicio eliminado exitosamente'
+        });
+    } catch (error) {
+        console.error('❌ Error DELETE /api/recepcion/servicios/:id:', error);
+        
+        if (error.message === 'Servicio no encontrado') {
+            return res.status(404).json({ message: error.message });
+        }
+        
+        res.status(500).json({
+            message: 'Error al eliminar servicio',
+            details: error.message
+        });
+    }
+};
+
 module.exports = exports;

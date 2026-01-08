@@ -71,7 +71,7 @@
           <tr v-for="cita in citas" :key="cita.Id_Cita" :class="getEstatusClass(cita.ID_Estatus)">
             <td>{{ cita.Id_Cita }}</td>
             <td>{{ formateaFecha(cita.Fecha_cita) }}</td>
-            <td>{{ cita.Hora_Inicio }} - {{ cita.Hora_Fin }}</td>
+            <td><span class="badge bg-secondary">{{ formatTime(cita.Hora_Inicio) }} - {{ formatTime(cita.Hora_Fin) }}</span></td>
             <td>{{ cita.Nombre_Paciente || 'N/D' }}</td>
             <td>{{ cita.Nombre_Doctor || 'N/D' }}</td>
             <td>
@@ -98,7 +98,7 @@
     <div v-if="modalCita" class="modal">
       <div class="modal-content">
         <h3>Cancelar cita {{ modalCita.Id_Cita }}</h3>
-        <p><strong>Fecha:</strong> {{ formateaFecha(modalCita.Fecha_cita) }} {{ modalCita.Hora_Inicio }} - {{ modalCita.Hora_Fin }}</p>
+        <p><strong>Fecha:</strong> {{ formateaFecha(modalCita.Fecha_cita) }} {{ formatTime(modalCita.Hora_Inicio) }} - {{ formatTime(modalCita.Hora_Fin) }}</p>
         <p><strong>Doctor:</strong> {{ modalCita.Nombre_Doctor || 'N/D' }}</p>
          <label>Quién solicita la cancelación</label>
          <select v-model="canceladoPor">
@@ -156,6 +156,17 @@ export default {
     formateaFecha(f) {
       if (!f) return '';
       return new Date(f).toLocaleDateString();
+    },
+    formatTime(val) {
+      if (!val) return '';
+      if (typeof val === 'string' && val.includes('T')) {
+        const [, time] = val.split('T');
+        return time ? time.slice(0, 5) : '';
+      }
+      if (typeof val === 'string' && val.length >= 5) return val.slice(0, 5);
+      const d = new Date(val);
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toISOString().slice(11, 16);
     },
     async cargarTodasLasCitas() {
       this.mensajeError = '';
@@ -280,6 +291,13 @@ export default {
   max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
+  min-width: 980px;
+}
+
+@media (max-width: 980px) {
+  .gestion-citas {
+    min-width: auto;
+  }
 }
 
 .filtros-container {

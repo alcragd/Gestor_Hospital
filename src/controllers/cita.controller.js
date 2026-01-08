@@ -36,13 +36,96 @@ exports.agendarCitaPaciente = async (req, res) => {
         const pacienteId = paciente.ID_Paciente;
         const nombreCompleto = `${paciente.Nombre} ${paciente.Paterno} ${paciente.Materno}`;
 
+        // Normalizar horas a HH:MM:SS
+        const toHms = (h) => {
+            if (!h) return h;
+            if (/^\d{2}:\d{2}:\d{2}$/.test(h)) return h;
+            if (/^\d{2}:\d{2}$/.test(h)) return `${h}:00`;
+            // intentar parsear Date string
+            const d = new Date(h);
+            if (!Number.isNaN(d.getTime())) {
+                const pad = (n)=> String(n).padStart(2,'0');
+                return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            }
+            return h;
+        };
+
+        const horaInicioHMS = toHms(Hora_Inicio);
+        const horaFinHMS = toHms(Hora_Fin);
+
+        // Validar que el paciente no tenga cita pendiente con el mismo doctor
+        const citaExistenteRes = await pool.request()
+            .input('pacienteId', db.sql.Int, pacienteId)
+            .input('idDoctor', db.sql.Int, Id_Doctor)
+            .query(`
+                SELECT TOP 1 C.Id_Cita, C.Fecha_cita, C.Hora_Inicio, C.Hora_Fin
+                FROM Citas C
+                WHERE C.ID_Paciente = @pacienteId
+                  AND C.Id_Doc = @idDoctor
+                  AND C.ID_Estatus IN (1, 2)
+                ORDER BY C.Fecha_cita DESC
+            `);
+
+        if (citaExistenteRes.recordset.length > 0) {
+            const citaExistente = citaExistenteRes.recordset[0];
+            
+            // Función para formatear hora desde diferentes tipos
+            const formatearHora = (hora) => {
+                if (!hora) return '';
+                if (typeof hora === 'string') {
+                    return hora.substring(0, 8);
+                }
+                if (typeof hora === 'object' && hora.toString) {
+                    const str = hora.toString();
+                    const match = str.match(/(\d{2}):(\d{2})/);
+                    return match ? `${match[1]}:${match[2]}:00` : '';
+                }
+                return '';
+            };
+            
+            return res.status(409).json({
+                message: 'El paciente ya tiene una cita pendiente con este doctor',
+                errorCode: 'CITA_DUPLICADA',
+                detalles: {
+                    citaExistente: {
+                        id: citaExistente.Id_Cita,
+                        fecha: citaExistente.Fecha_cita,
+                        horaInicio: formatearHora(citaExistente.Hora_Inicio),
+                        horaFin: formatearHora(citaExistente.Hora_Fin)
+                    }
+                }
+            });
+        }
+
+        // Prevalidar contra horario laboral para evitar rechazo del SP por desfase de formato/zonas
+        const horasTrabajo = await citaService.obtenerHorasTrabajoTotal(Id_Doctor, Fecha_Cita);
+        const toMin = (t) => {
+            const [hh,mm] = String(t||'').split(':');
+            const H = parseInt(hh,10); const M = parseInt(mm,10);
+            if (!Number.isFinite(H) || !Number.isFinite(M)) return null;
+            return H*60+M;
+        };
+        const ini = toMin(horaInicioHMS);
+        const fin = toMin(horaFinHMS);
+        const dentro = horasTrabajo.some(r => {
+            const ri = toMin(r.Hora_Inicio);
+            const rf = toMin(r.Hora_Fin);
+            return ri!==null && rf!==null && ini!==null && fin!==null && ri <= ini && fin < rf && ini < fin;
+        });
+        if (!dentro) {
+            return res.status(400).json({
+                message: 'La cita está fuera del horario laboral del doctor (validación previa)',
+                detalles: { Fecha_Cita, Hora_Inicio: horaInicioHMS, Hora_Fin: horaFinHMS, horasTrabajo }
+            });
+        }
+
         // Crear la cita usando el servicio existente
         const datosCita = {
             Id_Doctor,
             Id_Paciente: pacienteId,
             Fecha_Cita,
-            Hora_Inicio,
-            Hora_Fin,
+            Hora_Inicio: horaInicioHMS,
+            Hora_Fin: horaFinHMS,
             Usuario: `Paciente_${userId}`
         };
 
@@ -52,7 +135,7 @@ exports.agendarCitaPaciente = async (req, res) => {
         const citaCreada = await pool.request()
             .input('pacienteId', db.sql.Int, pacienteId)
             .input('fecha', db.sql.VarChar(10), Fecha_Cita)
-            .input('horaInicio', db.sql.VarChar(8), Hora_Inicio)
+            .input('horaInicio', db.sql.VarChar(8), horaInicioHMS)
             .query(`
                 SELECT TOP 1
                     C.Id_Cita AS Folio,
@@ -171,6 +254,16 @@ exports.getCitasPorPaciente = async (req, res) => {
 exports.getEspecialidades = async (req, res) => {
     try {
         const especialidades = await citaService.obtenerEspecialidades();
+        res.status(200).json(especialidades);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET /api/citas/especialidades-todas (sin filtro de doctores)
+exports.getEspecialidadesAll = async (req, res) => {
+    try {
+        const especialidades = await citaService.obtenerEspecialidadesAll();
         res.status(200).json(especialidades);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -311,7 +404,7 @@ exports.atenderCita = async (req, res) => {
         await pool.request()
             .input('reg', db.sql.Int, idCita)
             .input('usr', db.sql.VarChar, `Doctor_${userId}`)
-            .input('det', db.sql.VarChar, 'Cita marcada como atendida')
+            .input('det', db.sql.VarChar, 'Cita marcada como atendida (Pagada -> Atendida)')
             .query(`
                 INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
                 VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Citas')

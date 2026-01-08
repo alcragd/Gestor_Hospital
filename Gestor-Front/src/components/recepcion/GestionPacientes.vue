@@ -424,6 +424,13 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  min-width: 980px;
+}
+
+@media (max-width: 980px) {
+  .gestion-pacientes {
+    min-width: auto;
+  }
 }
 
 h2 {

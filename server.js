@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const db = require('./src/config/db.config');
 
 const app = express();
 const PORT = 3000;
@@ -32,6 +33,76 @@ app.get('/', (req, res) => {
   res.send('API del Gestor Hospital funcionando...');
 });
 
+// ============================================
+// PROCESOS AUTOMÁTICOS
+// ============================================
+let pool;
+const INTERVALO_CANCELACION = 60 * 60 * 1000; // 1 hora
+const INTERVALO_NO_ASISTENCIAS = 60 * 60 * 1000; // 1 hora
+
+async function inicializarProcesosAutomaticos() {
+  try {
+    pool = await db.connect();
+    console.log('✓ Pool de BD conectado para procesos automáticos');
+    
+    // Ejecutar inmediatamente al iniciar
+    await ejecutarCancelacionAutomatica();
+    await ejecutarMarcarNoAsistencias();
+    
+    // Luego ejecutar periódicamente
+    setInterval(async () => {
+      await ejecutarCancelacionAutomatica();
+    }, INTERVALO_CANCELACION);
+    
+    setInterval(async () => {
+      await ejecutarMarcarNoAsistencias();
+    }, INTERVALO_NO_ASISTENCIAS);
+    
+  } catch (error) {
+    console.error('✗ Error al inicializar procesos automáticos:', error.message);
+  }
+}
+
+async function ejecutarCancelacionAutomatica() {
+  const ahora = new Date().toISOString();
+  console.log(`\n[${ahora}] Ejecutando auto-cancelación de citas expiradas...`);
+  
+  try {
+    const resultado = await pool.request().execute('SP_CancelarCitasExpiradas');
+    const datos = resultado.recordset[0];
+    const canceladas = datos?.Citas_Canceladas || 0;
+    
+    if (canceladas > 0) {
+      console.log(`✓ ${canceladas} cita(s) cancelada(s) por exceder 8 horas sin pago`);
+    } else {
+      console.log('  No hay citas para cancelar');
+    }
+  } catch (error) {
+    console.error('✗ Error en auto-cancelación:', error.message);
+  }
+}
+
+async function ejecutarMarcarNoAsistencias() {
+  const ahora = new Date().toISOString();
+  console.log(`\n[${ahora}] Marcando citas como No Acudió...`);
+  
+  try {
+    const resultado = await pool.request().execute('SP_MarcarNoAsistencias');
+    const datos = resultado.recordset[0];
+    const marcadas = datos?.Citas_Marcadas || 0;
+    
+    if (marcadas > 0) {
+      console.log(`✓ ${marcadas} cita(s) marcada(s) como No Acudió (24h después de la hora programada)`);
+    } else {
+      console.log('  No hay citas para marcar como No Acudió');
+    }
+  } catch (error) {
+    console.error('✗ Error al marcar no-asistencias:', error.message);
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`Servidor Node.js corriendo en http://localhost:${PORT}`);
+  console.log('Inicializando procesos automáticos (cancelación + no-asistencias)...');
+  inicializarProcesosAutomaticos();
 });

@@ -1267,6 +1267,12 @@ class RecepcionService {
                     .input('idEmpleado', db.sql.Int, idEmpleado)
                     .query(`UPDATE Empleados SET Activo = 0 WHERE Id_Empleado = @idEmpleado`);
 
+                // Obtener IDs de citas que serán canceladas
+                const citasReq = new db.sql.Request(transaction);
+                const citasACancelar = await citasReq
+                    .input('idDoctor', db.sql.Int, idDoctor)
+                    .query(`SELECT Id_Cita FROM Citas WHERE Id_Doc = @idDoctor AND ID_Estatus IN (1, 2)`);
+
                 const cancelReq = new db.sql.Request(transaction);
                 const cancelRes = await cancelReq
                     .input('idDoctor', db.sql.Int, idDoctor)
@@ -1279,6 +1285,7 @@ class RecepcionService {
 
                 await transaction.commit();
 
+                // Registrar en bitácora la baja del doctor
                 await pool.request()
                     .input('reg', db.sql.Int, idDoctor)
                     .input('usr', db.sql.VarChar, usuarioRegistro)
@@ -1287,6 +1294,18 @@ class RecepcionService {
                         INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
                         VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Doctores')
                     `);
+
+                // Registrar en bitácora cada cita cancelada individualmente
+                for (const cita of citasACancelar.recordset) {
+                    await pool.request()
+                        .input('reg', db.sql.Int, cita.Id_Cita)
+                        .input('usr', db.sql.VarChar, usuarioRegistro)
+                        .input('det', db.sql.VarChar, `Cita cancelada por baja del doctor (ID: ${idDoctor})`)
+                        .query(`
+                            INSERT INTO Bitacora (Id_Reg_Afectado, Fecha_Hora, Usuario, Detalles, Accion, Tabla_Afectada)
+                            VALUES (@reg, GETDATE(), @usr, @det, 'UPDATE', 'Citas')
+                        `);
+                }
 
                 return { yaInactivo: false, canceladas: cancelRes.recordset[0].canceladas };
 
@@ -1344,6 +1363,320 @@ class RecepcionService {
                 throw error;
             }
         }
+
+    // ═══════════════════════════════════════════════════════════════
+    // HISTORIAL DE VENTAS
+    // ═══════════════════════════════════════════════════════════════
+
+    async obtenerHistorialVentas(filtros = {}) {
+        let pool;
+        try {
+            pool = await db.connect();
+            
+            let query = `
+                SELECT 
+                    ROW_NUMBER() OVER (ORDER BY V.Fecha_Hora DESC) AS Id_Venta,
+                    'medicamento' AS Tipo,
+                    V.Fecha_Hora AS Fecha,
+                    M.Nombre AS Producto_Servicio,
+                    V.Nombre_Cliente AS Cliente,
+                    DM.Cantidad AS Cantidad,
+                    M.Precio AS Precio_Unitario
+                FROM Detalles_med DM
+                INNER JOIN Venta V ON DM.Id_Venta = V.Id_Venta
+                INNER JOIN Medicamento M ON DM.Id_Medicamento = M.Id_Medicamento
+                WHERE 1=1
+            `;
+            
+            const request = pool.request();
+            
+            if (filtros.fechaInicio) {
+                query += ` AND CAST(V.Fecha_Hora AS DATE) >= @fechaInicio`;
+                request.input('fechaInicio', db.sql.Date, filtros.fechaInicio);
+            }
+            
+            if (filtros.fechaFin) {
+                query += ` AND CAST(V.Fecha_Hora AS DATE) <= @fechaFin`;
+                request.input('fechaFin', db.sql.Date, filtros.fechaFin);
+            }
+            
+            if (filtros.tipo && filtros.tipo !== 'medicamento') {
+                query = `SELECT * FROM (SELECT 1 AS dummy WHERE 1=0) AS empty`;
+            }
+            
+            let queryServicios = `
+                SELECT 
+                    ROW_NUMBER() OVER (ORDER BY V.Fecha_Hora DESC) AS Id_Venta,
+                    'servicio' AS Tipo,
+                    V.Fecha_Hora AS Fecha,
+                    S.Nombre AS Producto_Servicio,
+                    V.Nombre_Cliente AS Cliente,
+                    DS.Cantidad AS Cantidad,
+                    S.Precio AS Precio_Unitario
+                FROM Detalle_Servicio DS
+                INNER JOIN Venta V ON DS.Id_Venta = V.Id_Venta
+                INNER JOIN Servicios S ON DS.Id_Servicio = S.Id_Servicio
+                WHERE 1=1
+            `;
+            
+            if (filtros.fechaInicio) {
+                queryServicios += ` AND CAST(V.Fecha_Hora AS DATE) >= @fechaInicio`;
+            }
+            
+            if (filtros.fechaFin) {
+                queryServicios += ` AND CAST(V.Fecha_Hora AS DATE) <= @fechaFin`;
+            }
+            
+            if (filtros.tipo && filtros.tipo !== 'servicio') {
+                queryServicios = `SELECT * FROM (SELECT 1 AS dummy WHERE 1=0) AS empty`;
+            }
+            
+            const queryFinal = `
+                ${query}
+                UNION ALL
+                ${queryServicios}
+                ORDER BY Fecha DESC
+            `;
+            
+            const result = await request.query(queryFinal);
+            return result.recordset;
+            
+        } catch (error) {
+            console.error('❌ Error al obtener historial de ventas:', error);
+            throw error;
+        } finally {
+            if (pool) await pool.close();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // GESTIÓN DE MEDICAMENTOS
+    // ═══════════════════════════════════════════════════════════════
+
+    async crearMedicamento(data) {
+        let pool;
+        try {
+            pool = await db.connect();
+            
+            const result = await pool.request()
+                .input('nombre', db.sql.VarChar, data.Nombre)
+                .input('presentacion', db.sql.VarChar, data.Presentacion)
+                .input('dosis', db.sql.VarChar, data.Dosis)
+                .input('precio', db.sql.Decimal(10, 2), data.Precio)
+                .input('stock', db.sql.Int, data.Stock)
+                .input('stockMin', db.sql.Int, data.Stock_Minimo)
+                .query(`
+                    INSERT INTO Medicamento (Nombre, Presentacion, Dosis, Precio, Stock, Stock_Minimo)
+                    OUTPUT INSERTED.*
+                    VALUES (@nombre, @presentacion, @dosis, @precio, @stock, @stockMin)
+                `);
+            
+            return result.recordset[0];
+            
+        } catch (error) {
+            console.error('❌ Error al crear medicamento:', error);
+            throw error;
+        } finally {
+            if (pool) await pool.close();
+        }
+    }
+
+    async actualizarMedicamento(idMedicamento, data) {
+        let pool;
+        try {
+            pool = await db.connect();
+            
+            // Verificar que existe
+            const check = await pool.request()
+                .input('id', db.sql.Int, idMedicamento)
+                .query(`SELECT Id_Medicamento FROM Medicamento WHERE Id_Medicamento = @id`);
+            
+            if (check.recordset.length === 0) {
+                throw new Error('Medicamento no encontrado');
+            }
+            
+            const updates = [];
+            const request = pool.request().input('id', db.sql.Int, idMedicamento);
+            
+            if (data.Nombre !== undefined) {
+                updates.push('Nombre = @nombre');
+                request.input('nombre', db.sql.VarChar, data.Nombre);
+            }
+            if (data.Presentacion !== undefined) {
+                updates.push('Presentacion = @presentacion');
+                request.input('presentacion', db.sql.VarChar, data.Presentacion);
+            }
+            if (data.Dosis !== undefined) {
+                updates.push('Dosis = @dosis');
+                request.input('dosis', db.sql.VarChar, data.Dosis);
+            }
+            if (data.Precio !== undefined) {
+                updates.push('Precio = @precio');
+                request.input('precio', db.sql.Decimal(10, 2), data.Precio);
+            }
+            if (data.Stock !== undefined) {
+                updates.push('Stock = @stock');
+                request.input('stock', db.sql.Int, data.Stock);
+            }
+            if (data.Stock_Minimo !== undefined) {
+                updates.push('Stock_Minimo = @stockMin');
+                request.input('stockMin', db.sql.Int, data.Stock_Minimo);
+            }
+            
+            if (updates.length === 0) {
+                return check.recordset[0];
+            }
+            
+            const result = await request.query(`
+                UPDATE Medicamento
+                SET ${updates.join(', ')}
+                OUTPUT INSERTED.*
+                WHERE Id_Medicamento = @id
+            `);
+            
+            return result.recordset[0];
+            
+        } catch (error) {
+            console.error('❌ Error al actualizar medicamento:', error);
+            throw error;
+        } finally {
+            if (pool) await pool.close();
+        }
+    }
+
+    async eliminarMedicamento(idMedicamento) {
+        let pool;
+        try {
+            pool = await db.connect();
+            
+            const check = await pool.request()
+                .input('id', db.sql.Int, idMedicamento)
+                .query(`SELECT Id_Medicamento FROM Medicamento WHERE Id_Medicamento = @id`);
+            
+            if (check.recordset.length === 0) {
+                throw new Error('Medicamento no encontrado');
+            }
+            
+            await pool.request()
+                .input('id', db.sql.Int, idMedicamento)
+                .query(`DELETE FROM Medicamento WHERE Id_Medicamento = @id`);
+            
+            return { success: true };
+            
+        } catch (error) {
+            console.error('❌ Error al eliminar medicamento:', error);
+            throw error;
+        } finally {
+            if (pool) await pool.close();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // GESTIÓN DE SERVICIOS
+    // ═══════════════════════════════════════════════════════════════
+
+    async crearServicio(data) {
+        let pool;
+        try {
+            pool = await db.connect();
+            
+            const result = await pool.request()
+                .input('nombre', db.sql.VarChar, data.Nombre)
+                .input('descripcion', db.sql.VarChar, data.Descripcion)
+                .input('precio', db.sql.Decimal(10, 2), data.Precio)
+                .query(`
+                    INSERT INTO Servicios (Nombre, Descripcion, Precio)
+                    OUTPUT INSERTED.*
+                    VALUES (@nombre, @descripcion, @precio)
+                `);
+            
+            return result.recordset[0];
+            
+        } catch (error) {
+            console.error('❌ Error al crear servicio:', error);
+            throw error;
+        } finally {
+            if (pool) await pool.close();
+        }
+    }
+
+    async actualizarServicio(idServicio, data) {
+        let pool;
+        try {
+            pool = await db.connect();
+            
+            // Verificar que existe
+            const check = await pool.request()
+                .input('id', db.sql.Int, idServicio)
+                .query(`SELECT Id_Servicio FROM Servicios WHERE Id_Servicio = @id`);
+            
+            if (check.recordset.length === 0) {
+                throw new Error('Servicio no encontrado');
+            }
+            
+            const updates = [];
+            const request = pool.request().input('id', db.sql.Int, idServicio);
+            
+            if (data.Nombre !== undefined) {
+                updates.push('Nombre = @nombre');
+                request.input('nombre', db.sql.VarChar, data.Nombre);
+            }
+            if (data.Descripcion !== undefined) {
+                updates.push('Descripcion = @descripcion');
+                request.input('descripcion', db.sql.VarChar, data.Descripcion);
+            }
+            if (data.Precio !== undefined) {
+                updates.push('Precio = @precio');
+                request.input('precio', db.sql.Decimal(10, 2), data.Precio);
+            }
+            
+            if (updates.length === 0) {
+                return check.recordset[0];
+            }
+            
+            const result = await request.query(`
+                UPDATE Servicios
+                SET ${updates.join(', ')}
+                OUTPUT INSERTED.*
+                WHERE Id_Servicio = @id
+            `);
+            
+            return result.recordset[0];
+            
+        } catch (error) {
+            console.error('❌ Error al actualizar servicio:', error);
+            throw error;
+        } finally {
+            if (pool) await pool.close();
+        }
+    }
+
+    async eliminarServicio(idServicio) {
+        let pool;
+        try {
+            pool = await db.connect();
+            
+            const check = await pool.request()
+                .input('id', db.sql.Int, idServicio)
+                .query(`SELECT Id_Servicio FROM Servicios WHERE Id_Servicio = @id`);
+            
+            if (check.recordset.length === 0) {
+                throw new Error('Servicio no encontrado');
+            }
+            
+            await pool.request()
+                .input('id', db.sql.Int, idServicio)
+                .query(`DELETE FROM Servicios WHERE Id_Servicio = @id`);
+            
+            return { success: true };
+            
+        } catch (error) {
+            console.error('❌ Error al eliminar servicio:', error);
+            throw error;
+        } finally {
+            if (pool) await pool.close();
+        }
+    }
 }
 
 module.exports = new RecepcionService();

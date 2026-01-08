@@ -469,6 +469,136 @@ class RecepcionService {
             throw error;
         }
     }
+
+    // ==================== HISTORIAL DE VENTAS ====================
+
+    async obtenerHistorialVentas(filtros) {
+        try {
+            const params = new URLSearchParams();
+            if (filtros.fechaInicio) params.append('fechaInicio', filtros.fechaInicio);
+            if (filtros.fechaFin) params.append('fechaFin', filtros.fechaFin);
+            if (filtros.tipo) params.append('tipo', filtros.tipo);
+
+            const response = await fetch(`${API_URL}/ventas/historial?${params}`, {
+                headers: this.getHeaders()
+            });
+            if (!response.ok) throw new Error('Error al obtener historial de ventas');
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.obtenerHistorialVentas:', error);
+            throw error;
+        }
+    }
+
+    // ==================== GESTION DE MEDICAMENTOS ====================
+
+    async crearMedicamento(data) {
+        try {
+            const response = await fetch(`${API_URL}/medicamentos`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al crear medicamento');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.crearMedicamento:', error);
+            throw error;
+        }
+    }
+
+    async actualizarMedicamento(id, data) {
+        try {
+            const response = await fetch(`${API_URL}/medicamentos/${id}`, {
+                method: 'PUT',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al actualizar medicamento');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.actualizarMedicamento:', error);
+            throw error;
+        }
+    }
+
+    async eliminarMedicamento(id) {
+        try {
+            const response = await fetch(`${API_URL}/medicamentos/${id}`, {
+                method: 'DELETE',
+                headers: this.getHeaders()
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al eliminar medicamento');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.eliminarMedicamento:', error);
+            throw error;
+        }
+    }
+
+    // ==================== GESTION DE SERVICIOS ====================
+
+    async crearServicio(data) {
+        try {
+            const response = await fetch(`${API_URL}/servicios`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al crear servicio');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.crearServicio:', error);
+            throw error;
+        }
+    }
+
+    async actualizarServicio(id, data) {
+        try {
+            const response = await fetch(`${API_URL}/servicios/${id}`, {
+                method: 'PUT',
+                headers: this.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al actualizar servicio');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.actualizarServicio:', error);
+            throw error;
+        }
+    }
+
+    async eliminarServicio(id) {
+        try {
+            const response = await fetch(`${API_URL}/servicios/${id}`, {
+                method: 'DELETE',
+                headers: this.getHeaders()
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Error al eliminar servicio');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error en RecepcionService.eliminarServicio:', error);
+            throw error;
+        }
+    }
 }
 
 export default new RecepcionService();

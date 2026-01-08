@@ -133,29 +133,66 @@
     <!-- TAB: Accesos a Historial Médico -->
     <!-- ============================================ -->
     <div v-if="tab === 'historial-medico'" class="card">
-      <div class="card-header bg-light">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Registro de Accesos a Historiales Médicos</h5>
+        <button v-if="accesosHistorial.length > 0" @click="exportarAccesosCSV" class="btn btn-sm btn-success">
+          📊 Exportar CSV
+        </button>
       </div>
       <div class="card-body">
-        <!-- Filtros -->
+        <!-- Filtros Mejorados -->
         <div class="row g-2 mb-3">
-          <div class="col-md-4">
-            <label class="form-label small">ID Paciente</label>
-            <input type="number" class="form-control form-control-sm" v-model.number="filtrosHistorial.idPaciente" placeholder="Ingrese ID del paciente">
-          </div>
           <div class="col-md-3">
+            <label class="form-label small">Buscar Paciente</label>
+            <input type="text" class="form-control form-control-sm" v-model="filtrosHistorial.busquedaPaciente" 
+                   placeholder="ID o Nombre del paciente" @input="buscarPacientes">
+            <!-- Sugerencias de pacientes -->
+            <div v-if="pacientesSugeridos.length > 0" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1000; max-height: 200px; overflow-y: auto;">
+              <button v-for="pac in pacientesSugeridos" :key="pac.Id_Paciente" 
+                      @click="seleccionarPaciente(pac)" 
+                      class="list-group-item list-group-item-action small">
+                <strong>ID: {{ pac.Id_Paciente }}</strong> - {{ pac.Nombre }} {{ pac.Paterno }} {{ pac.Materno }}
+              </button>
+            </div>
+          </div>
+          <div class="col-md-2">
             <label class="form-label small">Fecha Desde</label>
             <input type="date" class="form-control form-control-sm" v-model="filtrosHistorial.desde">
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <label class="form-label small">Fecha Hasta</label>
             <input type="date" class="form-control form-control-sm" v-model="filtrosHistorial.hasta">
           </div>
-          <div class="col-md-2 d-flex align-items-end">
+          <div class="col-md-2">
+            <label class="form-label small">Doctor</label>
+            <select class="form-select form-select-sm" v-model="filtrosHistorial.idDoctor">
+              <option value="">Todos</option>
+              <option v-for="doc in doctoresDisponibles" :key="doc.Id_Doctor" :value="doc.Id_Doctor">
+                {{ doc.Nombre }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">Tipo Acción</label>
+            <select class="form-select form-select-sm" v-model="filtrosHistorial.tipoAccion">
+              <option value="">Todas</option>
+              <option value="CONSULTA_HISTORIAL">Consulta</option>
+              <option value="CREACION_RECETA">Receta</option>
+              <option value="ATENCION_CITA">Atención</option>
+            </select>
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
             <button class="btn btn-sm btn-primary w-100" @click="cargarAccesosHistorial" :disabled="!filtrosHistorial.idPaciente">
-              Buscar
+              🔍
             </button>
           </div>
+        </div>
+
+        <!-- Info del paciente seleccionado -->
+        <div v-if="pacienteSeleccionado" class="alert alert-info py-2 mb-3">
+          <strong>Paciente:</strong> {{ pacienteSeleccionado.Nombre }} {{ pacienteSeleccionado.Paterno }} {{ pacienteSeleccionado.Materno }}
+          <span class="ms-3"><strong>ID:</strong> {{ pacienteSeleccionado.Id_Paciente }}</span>
+          <button @click="limpiarPaciente" class="btn btn-sm btn-outline-secondary float-end py-0">✕ Limpiar</button>
         </div>
 
         <!-- Mensajes -->
@@ -164,10 +201,11 @@
         </div>
 
         <!-- Tabla de resultados -->
-        <div v-if="accesosHistorial.length > 0" class="table-responsive">
+        <div v-if="accesosFiltrados.length > 0" class="table-responsive">
           <table class="table table-hover table-sm">
             <thead class="table-light">
               <tr>
+                <th style="width: 40px;"></th>
                 <th>ID Cita</th>
                 <th>Fecha Cita</th>
                 <th>Doctor Atención</th>
@@ -176,44 +214,75 @@
                 <th>Tipo Acción</th>
                 <th>Fecha/Hora Acceso</th>
                 <th>Receta</th>
-                <th>Detalles</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="acceso in accesosHistorial" :key="acceso.Id_Bitacora">
-                <td><strong>{{ acceso.Id_Cita }}</strong></td>
-                <td>{{ formatFecha(acceso.Fecha_cita) }}</td>
-                <td>{{ acceso.Doctor_Atencion }}</td>
-                <td>{{ acceso.Especialidad }}</td>
-                <td>
-                  <div>{{ acceso.Nombre_Usuario }}</div>
-                  <small class="text-muted">{{ acceso.Rol_Usuario }}</small>
-                </td>
-                <td>
-                  <span class="badge" :class="getTipoAccionBadge(acceso.Tipo_Accion)">
-                    {{ acceso.Tipo_Accion }}
-                  </span>
-                </td>
-                <td>{{ formatFechaHora(acceso.Fecha_Accion) }}</td>
-                <td>
-                  <span v-if="acceso.Id_Receta" class="badge bg-info">
-                    Receta #{{ acceso.Id_Receta }}
-                  </span>
-                  <span v-else>-</span>
-                </td>
-                <td>
-                  <small v-if="acceso.Detalles">{{ acceso.Detalles }}</small>
-                  <span v-else class="text-muted">-</span>
-                </td>
-              </tr>
+              <template v-for="acceso in accesosFiltrados" :key="acceso.Id_Bitacora">
+                <tr @click="toggleDetalles(acceso.Id_Bitacora)" style="cursor: pointer;">
+                  <td>
+                    <span v-if="accesoExpandido === acceso.Id_Bitacora">▼</span>
+                    <span v-else>▶</span>
+                  </td>
+                  <td><strong>{{ acceso.Id_Cita }}</strong></td>
+                  <td>{{ formatFecha(acceso.Fecha_cita) }}</td>
+                  <td>{{ acceso.Doctor_Atencion }}</td>
+                  <td><small>{{ acceso.Especialidad }}</small></td>
+                  <td>
+                    <div>{{ acceso.Nombre_Usuario }}</div>
+                    <small class="text-muted">{{ acceso.Rol_Usuario }}</small>
+                  </td>
+                  <td>
+                    <span class="badge" :class="getTipoAccionBadge(acceso.Tipo_Accion)">
+                      {{ acceso.Tipo_Accion }}
+                    </span>
+                  </td>
+                  <td>{{ formatFechaHora(acceso.Fecha_Accion) }}</td>
+                  <td>
+                    <span v-if="acceso.Id_Receta" class="badge bg-info">
+                      Receta #{{ acceso.Id_Receta }}
+                    </span>
+                    <span v-else>-</span>
+                  </td>
+                </tr>
+                <!-- Fila expandida con detalles -->
+                <tr v-if="accesoExpandido === acceso.Id_Bitacora">
+                  <td colspan="9" class="bg-light">
+                    <div class="p-3">
+                      <div class="row">
+                        <div class="col-md-6">
+                          <h6 class="text-primary">Información de la Cita</h6>
+                          <p class="mb-1"><strong>ID Cita:</strong> {{ acceso.Id_Cita }}</p>
+                          <p class="mb-1"><strong>Fecha:</strong> {{ formatFecha(acceso.Fecha_cita) }}</p>
+                          <p class="mb-1"><strong>Doctor:</strong> {{ acceso.Doctor_Atencion }}</p>
+                          <p class="mb-1"><strong>Especialidad:</strong> {{ acceso.Especialidad }}</p>
+                        </div>
+                        <div class="col-md-6">
+                          <h6 class="text-primary">Detalles del Acceso</h6>
+                          <p class="mb-1"><strong>Usuario:</strong> {{ acceso.Nombre_Usuario }} ({{ acceso.Rol_Usuario }})</p>
+                          <p class="mb-1"><strong>Tipo:</strong> {{ acceso.Tipo_Accion }}</p>
+                          <p class="mb-1"><strong>Fecha/Hora:</strong> {{ formatFechaHora(acceso.Fecha_Accion) }}</p>
+                          <p v-if="acceso.Id_Receta" class="mb-1"><strong>Receta:</strong> #{{ acceso.Id_Receta }}</p>
+                          <p v-if="acceso.Detalles" class="mb-1"><strong>Detalles:</strong> {{ acceso.Detalles }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
-          <div class="text-muted small">
-            Total de accesos: {{ accesosHistorial.length }}
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <div class="text-muted small">
+              Mostrando {{ accesosFiltrados.length }} de {{ accesosHistorial.length }} accesos
+            </div>
+            <div v-if="accesosFiltrados.length !== accesosHistorial.length" class="text-muted small">
+              <span class="badge bg-warning text-dark">Filtros aplicados</span>
+            </div>
           </div>
         </div>
         <div v-else-if="!cargandoHistorial" class="text-center text-muted py-4">
-          Ingrese un ID de paciente para consultar el historial de accesos.
+          <p>Busque un paciente para consultar el historial de accesos médicos.</p>
+          <small>Puede buscar por ID o nombre del paciente</small>
         </div>
         <div v-if="cargandoHistorial" class="text-center py-4">
           <div class="spinner-border text-primary" role="status">
@@ -336,12 +405,20 @@ export default {
       accesosHistorial: [],
       filtrosHistorial: {
         idPaciente: null,
+        busquedaPaciente: '',
         desde: '',
-        hasta: ''
+        hasta: '',
+        idDoctor: '',
+        tipoAccion: ''
       },
       cargandoHistorial: false,
       mensajeHistorial: '',
       errorHistorial: false,
+      pacientesSugeridos: [],
+      pacienteSeleccionado: null,
+      doctoresDisponibles: [],
+      accesoExpandido: null,
+      busquedaTimeout: null,
       
       // Estadísticas
       estadisticas: null,
@@ -366,6 +443,24 @@ export default {
     
     // Cargar datos iniciales
     this.cargarCambiosEstatus();
+    this.cargarDoctores();
+  },
+  computed: {
+    accesosFiltrados() {
+      let accesos = [...this.accesosHistorial];
+      
+      // Filtrar por doctor
+      if (this.filtrosHistorial.idDoctor) {
+        accesos = accesos.filter(a => a.Id_Doctor === parseInt(this.filtrosHistorial.idDoctor));
+      }
+      
+      // Filtrar por tipo de acción
+      if (this.filtrosHistorial.tipoAccion) {
+        accesos = accesos.filter(a => a.Tipo_Accion === this.filtrosHistorial.tipoAccion);
+      }
+      
+      return accesos;
+    }
   },
   methods: {
     async cargarCambiosEstatus() {
@@ -403,7 +498,7 @@ export default {
     
     async cargarAccesosHistorial() {
       if (!this.filtrosHistorial.idPaciente) {
-        this.mensajeHistorial = 'Debe ingresar un ID de paciente';
+        this.mensajeHistorial = 'Debe seleccionar un paciente';
         this.errorHistorial = true;
         return;
       }
@@ -440,6 +535,101 @@ export default {
       } finally {
         this.cargandoHistorial = false;
       }
+    },
+    
+    async buscarPacientes() {
+      // Limpiar timeout anterior
+      if (this.busquedaTimeout) {
+        clearTimeout(this.busquedaTimeout);
+      }
+      
+      // Limpiar sugerencias si no hay búsqueda
+      if (!this.filtrosHistorial.busquedaPaciente || this.filtrosHistorial.busquedaPaciente.length < 2) {
+        this.pacientesSugeridos = [];
+        return;
+      }
+      
+      // Esperar 300ms antes de buscar
+      this.busquedaTimeout = setTimeout(async () => {
+        try {
+          const response = await axios.get(
+            `http://localhost:3000/api/pacientes/buscar?q=${this.filtrosHistorial.busquedaPaciente}`,
+            {
+              headers: {
+                'x-user-id': localStorage.getItem('userId'),
+                'x-user-role': localStorage.getItem('userRole')
+              }
+            }
+          );
+          this.pacientesSugeridos = response.data.pacientes || [];
+        } catch (error) {
+          console.error('Error al buscar pacientes:', error);
+        }
+      }, 300);
+    },
+    
+    seleccionarPaciente(paciente) {
+      this.filtrosHistorial.idPaciente = paciente.Id_Paciente;
+      this.filtrosHistorial.busquedaPaciente = `${paciente.Nombre} ${paciente.Paterno} ${paciente.Materno}`;
+      this.pacienteSeleccionado = paciente;
+      this.pacientesSugeridos = [];
+    },
+    
+    limpiarPaciente() {
+      this.filtrosHistorial.idPaciente = null;
+      this.filtrosHistorial.busquedaPaciente = '';
+      this.pacienteSeleccionado = null;
+      this.accesosHistorial = [];
+      this.mensajeHistorial = '';
+    },
+    
+    async cargarDoctores() {
+      try {
+        const response = await axios.get('http://localhost:3000/api/recepcion/doctores', {
+          headers: {
+            'x-user-id': localStorage.getItem('userId'),
+            'x-user-role': localStorage.getItem('userRole')
+          }
+        });
+        this.doctoresDisponibles = response.data.doctores || [];
+      } catch (error) {
+        console.error('Error al cargar doctores:', error);
+      }
+    },
+    
+    toggleDetalles(idBitacora) {
+      this.accesoExpandido = this.accesoExpandido === idBitacora ? null : idBitacora;
+    },
+    
+    exportarAccesosCSV() {
+      const datos = this.accesosFiltrados.map(a => ({
+        'ID Cita': a.Id_Cita,
+        'Fecha Cita': this.formatFecha(a.Fecha_cita),
+        'Doctor Atención': a.Doctor_Atencion,
+        'Especialidad': a.Especialidad,
+        'Usuario Acceso': a.Nombre_Usuario,
+        'Rol': a.Rol_Usuario,
+        'Tipo Acción': a.Tipo_Accion,
+        'Fecha/Hora Acceso': this.formatFechaHora(a.Fecha_Accion),
+        'ID Receta': a.Id_Receta || '-',
+        'Detalles': a.Detalles || '-'
+      }));
+      
+      const headers = Object.keys(datos[0]);
+      const csv = [
+        headers.join(','),
+        ...datos.map(row => headers.map(h => `"${row[h]}"`).join(','))
+      ].join('\n');
+      
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `accesos_medicos_${this.pacienteSeleccionado?.Id_Paciente || 'paciente'}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     },
     
     async cargarEstadisticas() {
@@ -503,6 +693,13 @@ export default {
 <style scoped>
 .bitacoras {
   max-width: 100%;
+  min-width: 980px;
+}
+
+@media (max-width: 980px) {
+  .bitacoras {
+    min-width: auto;
+  }
 }
 
 .nav-link {
@@ -521,5 +718,37 @@ export default {
 
 .badge {
   font-size: 0.8rem;
+}
+
+.list-group {
+  margin-top: 2px;
+  border-radius: 0.25rem;
+  max-width: calc(100% - 24px);
+}
+
+.list-group-item {
+  padding: 0.5rem;
+  cursor: pointer;
+  border: 1px solid #dee2e6;
+}
+
+.list-group-item:hover {
+  background-color: #f8f9fa;
+}
+
+tbody tr {
+  transition: background-color 0.2s;
+}
+
+tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.bg-light {
+  background-color: #f8f9fa !important;
+}
+
+.position-absolute {
+  position: absolute;
 }
 </style>

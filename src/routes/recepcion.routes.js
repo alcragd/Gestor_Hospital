@@ -89,6 +89,9 @@ router.post('/recepcionistas/:id/baja', recepcionController.darDeBajaRecepcionis
 // ═══════════════════════════════════════════════════════════════
 
 router.get('/servicios', recepcionController.listarServicios);
+router.post('/servicios', recepcionController.crearServicio);
+router.put('/servicios/:id', recepcionController.actualizarServicio);
+router.delete('/servicios/:id', recepcionController.eliminarServicio);
 router.post('/servicios/venta', recepcionController.venderServicio);
 
 // ═══════════════════════════════════════════════════════════════
@@ -96,8 +99,17 @@ router.post('/servicios/venta', recepcionController.venderServicio);
 // ═══════════════════════════════════════════════════════════════
 
 router.get('/medicamentos', recepcionController.listarMedicamentos);
+router.post('/medicamentos', recepcionController.crearMedicamento);
+router.put('/medicamentos/:id', recepcionController.actualizarMedicamento);
+router.delete('/medicamentos/:id', recepcionController.eliminarMedicamento);
 router.post('/medicamentos/venta', recepcionController.venderMedicamento);
 router.put('/medicamentos/:id/stock', recepcionController.actualizarStock);
+
+// ═══════════════════════════════════════════════════════════════
+// RUTAS - HISTORIAL DE VENTAS
+// ═══════════════════════════════════════════════════════════════
+
+router.get('/ventas/historial', recepcionController.obtenerHistorialVentas);
 
 // ═══════════════════════════════════════════════════════════════
 // RUTAS - GESTIÓN DE CITAS

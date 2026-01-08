@@ -54,6 +54,9 @@
         <GestionDoctores v-if="currentView === 'doctores'" />
         <GestionCitas v-if="currentView === 'citas'" />
         <VentasUnificadas v-if="currentView === 'ventas'" />
+        <HistorialVentas v-if="currentView === 'historial'" />
+        <GestionMedicamentos v-if="currentView === 'medicamentos'" />
+        <GestionServicios v-if="currentView === 'servicios'" />
         <GestionRecepcionistas v-if="currentView === 'recepcionistas'" />
         <BitacorasSistema v-if="currentView === 'bitacoras'" />
       </div>
@@ -68,6 +71,9 @@ import GestionCitas from './GestionCitas.vue';
 import VentasUnificadas from './VentasUnificadas.vue';
 import GestionRecepcionistas from './GestionRecepcionistas.vue';
 import BitacorasSistema from './BitacorasSistema.vue';
+import HistorialVentas from './HistorialVentas.vue';
+import GestionMedicamentos from './GestionMedicamentos.vue';
+import GestionServicios from './GestionServicios.vue';
 
 export default {
   name: 'PanelRecepcionista',
@@ -77,7 +83,10 @@ export default {
     GestionCitas,
     VentasUnificadas,
     BitacorasSistema,
-    GestionRecepcionistas
+    GestionRecepcionistas,
+    HistorialVentas,
+    GestionMedicamentos,
+    GestionServicios
   },
   data() {
     return {
@@ -90,6 +99,9 @@ export default {
         { id: 'doctores', label: 'Doctores' },
         { id: 'citas', label: 'Citas' },
         { id: 'ventas', label: 'Ventas' },
+        { id: 'historial', label: 'Historial de Ventas' },
+        { id: 'medicamentos', label: 'Medicamentos' },
+        { id: 'servicios', label: 'Servicios' },
         { id: 'bitacoras', label: 'Bitácoras' },
         { id: 'recepcionistas', label: 'Recepcionistas' }
       ]
@@ -203,6 +215,7 @@ export default {
   padding: 1.25rem;
   min-height: 100vh;
   background: #f5f5f5;
+  min-width: 980px;
 }
 
 /* PANEL CARD */
@@ -220,7 +233,11 @@ export default {
 }
 
 /* RESPONSIVE */
-@media (max-width: 768px) {
+@media (max-width: 980px) {
+  .form-wrapper {
+    min-width: auto;
+  }
+  
   .panel-card {
     margin: 0.5rem;
     padding: 0.1rem;

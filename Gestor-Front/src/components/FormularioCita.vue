@@ -177,6 +177,7 @@ import CitaService from '../services/CitaService';
 
 export default {
   name: 'FormularioCita',
+  emits: ['cita-creada'],
   data() {
     return {
       // Estado inicial del formulario
@@ -325,7 +326,8 @@ export default {
         while (horaActual < horaFinRango) {
           const finSlot = new Date(horaActual.getTime() + duracionCitaMinutos * 60000);
           
-          if (finSlot > horaFinRango) break;
+          // Evitar slot que termina exactamente en el fin del rango (exclusivo)
+          if (finSlot >= horaFinRango) break;
           
           const formatTime = (date) => date.toTimeString().split(' ')[0];
           const horaInicioStr = formatTime(horaActual);
@@ -385,7 +387,7 @@ export default {
       return null;
     },
     // Agrega este método en la sección de methods:
-seleccionarSlot(slot) {
+  seleccionarSlot(slot) {
     console.log("seleccionarSlot ejecutado");
     console.log("  Slot:", slot);
     console.log("  selected.doctorId:", this.selected.doctorId);
@@ -394,9 +396,9 @@ seleccionarSlot(slot) {
     console.log("  userId desde localStorage:", userId);
     
     if (!userId) {
-        console.error("No hay userId para agendar cita");
-        this.mensaje = "Error: No estás autenticado";
-        return;
+      console.error("No hay userId para agendar cita");
+      this.mensaje = "Error: No estás autenticado";
+      return;
     }
     
     // Convertir a número
@@ -404,9 +406,9 @@ seleccionarSlot(slot) {
     console.log("  pacienteId (convertido a número):", pacienteId);
     
     if (isNaN(pacienteId)) {
-        console.error("userId no es un número válido:", userId);
-        this.mensaje = "Error: ID de paciente inválido";
-        return;
+      console.error("userId no es un número válido:", userId);
+      this.mensaje = "Error: ID de paciente inválido";
+      return;
     }
     
     // Asignar datos a la cita
@@ -424,7 +426,7 @@ seleccionarSlot(slot) {
     console.log("  - Hora Fin:", this.cita.Hora_Fin);
     
     this.mensaje = `Horario ${slot.inicio.substring(0,5)} seleccionado. Presiona "Confirmar Cita".`;
-},
+  },
 
     async submitCita() {
       this.mensaje = '';
@@ -474,8 +476,48 @@ seleccionarSlot(slot) {
         }
 
       } catch (error) {
-        this.mensaje = `Fallo al agendar: ${error.message}`;
         this.isSuccess = false;
+        
+        // Parsear el payload del error para mensajes más específicos
+        const payload = error.payload;
+        if (payload) {
+          if (payload.errorCode === 'CITA_DUPLICADA') {
+            const cita = payload.detalles?.citaExistente;
+            if (cita) {
+              // Formattear fecha: convertir ISO a YYYY-MM-DD
+              const formatearFecha = (fechaStr) => {
+                if (!fechaStr) return '';
+                if (typeof fechaStr === 'string' && fechaStr.includes('T')) {
+                  return fechaStr.split('T')[0];
+                }
+                return fechaStr;
+              };
+              
+              // Formattear hora: extraer HH:MM de string HH:MM:SS
+              const formatearHora = (horaStr) => {
+                if (!horaStr) return '';
+                if (typeof horaStr === 'string') {
+                  return horaStr.substring(0, 5);
+                }
+                return horaStr;
+              };
+              
+              const fecha = formatearFecha(cita.fecha);
+              const horaInicio = formatearHora(cita.horaInicio);
+              const horaFin = formatearHora(cita.horaFin);
+              
+              this.mensaje = `Ya tienes una cita pendiente con este doctor:\nFecha: ${fecha}\nHora: ${horaInicio} - ${horaFin}`;
+            } else {
+              this.mensaje = 'Ya tienes una cita pendiente con este doctor.';
+            }
+          } else if (payload.message) {
+            this.mensaje = payload.message;
+          } else {
+            this.mensaje = `Fallo al agendar: ${error.message}`;
+          }
+        } else {
+          this.mensaje = `Fallo al agendar: ${error.message}`;
+        }
       } finally {
         this.isLoading = false;
       }
@@ -485,16 +527,6 @@ seleccionarSlot(slot) {
 
     window.location.href = "/login.html";
   },
-seleccionarSlot(slot) {
-  const pacienteId = localStorage.getItem("userId");
-  
-  this.cita.Id_Doctor = this.selected.doctorId;
-  this.cita.Id_Paciente = parseInt(pacienteId, 10); // Convertir a número
-  this.cita.Fecha_Cita = this.selected.fecha;
-  this.cita.Hora_Inicio = slot.inicio.substring(0, 8); 
-  this.cita.Hora_Fin = slot.fin.substring(0, 8);       
-  this.mensaje = `Slot ${slot.inicio} seleccionado. Presione Confirmar Cita.`;
-},
     
     resetForm() {
       this.cita.Fecha_Cita = '';

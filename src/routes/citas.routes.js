@@ -206,6 +206,7 @@ router.get('/mis-citas-doctor', async (req, res) => {
 });
 
 router.get('/especialidades', citaController.getEspecialidades);
+router.get('/especialidades-todas', citaController.getEspecialidadesAll);
 router.get('/doctores/:id_especialidad', citaController.getDoctoresPorEspecialidad);
 router.post('/disponibilidad', citaController.getSlotsOcupados); 
 router.post('/horario-trabajo', citaController.getHorarioTrabajo);

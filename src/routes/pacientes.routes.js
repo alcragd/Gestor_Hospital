@@ -10,6 +10,48 @@ function getUserContext(req) {
     return { userId, role };
 }
 
+// GET /api/pacientes/buscar -> Buscar pacientes por ID o nombre
+router.get('/buscar', async (req, res) => {
+    const { q } = req.query;
+    
+    if (!q || q.length < 2) {
+        return res.status(400).json({ message: 'La búsqueda debe tener al menos 2 caracteres' });
+    }
+
+    let pool;
+    try {
+        pool = await db.connect();
+
+        const result = await pool.request()
+            .input('busqueda', db.sql.VarChar, `%${q}%`)
+            .query(`
+                SELECT TOP 10
+                    P.ID_Paciente AS Id_Paciente,
+                    P.Nombre,
+                    P.Paterno,
+                    P.Materno,
+                    P.DNI,
+                    P.Telefono_cel
+                FROM Pacientes P
+                WHERE 
+                    CAST(P.ID_Paciente AS VARCHAR) LIKE @busqueda
+                    OR P.Nombre LIKE @busqueda
+                    OR P.Paterno LIKE @busqueda
+                    OR P.Materno LIKE @busqueda
+                    OR P.DNI LIKE @busqueda
+                ORDER BY P.ID_Paciente DESC
+            `);
+
+        return res.json({ pacientes: result.recordset });
+
+    } catch (error) {
+        console.error('❌ Error al buscar pacientes:', error);
+        return res.status(500).json({ message: 'Error al buscar pacientes' });
+    } finally {
+        if (pool) await pool.close();
+    }
+});
+
 // GET /api/pacientes/me -> Perfil del paciente autenticado
 router.get('/me', async (req, res) => {
     const { userId, role } = getUserContext(req);

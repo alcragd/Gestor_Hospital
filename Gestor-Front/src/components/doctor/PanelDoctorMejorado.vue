@@ -3,7 +3,7 @@
     <!-- Modales -->
     <div v-if="mostrarReceta" class="modal-backdrop">
       <div class="modal-content-custom">
-        <button class="btn-close-modal" @click="mostrarReceta = false">×</button>
+        <button class="btn-close-modal" @click="mostrarReceta = false">✕</button>
         <GenerarReceta 
           :cita="citaSeleccionada"
           :citasDisponibles="citas"
@@ -16,7 +16,7 @@
 
     <div v-if="mostrarHistorial" class="modal-backdrop">
       <div class="modal-content-custom">
-        <button class="btn-close-modal" @click="mostrarHistorial = false">×</button>
+        <button class="btn-close-modal" @click="mostrarHistorial = false">✕</button>
         <HistorialMedico 
           :pacienteId="pacienteSeleccionado?.Id_Paciente"
           :pacienteData="pacienteSeleccionado"
@@ -41,28 +41,23 @@
         <ul class="nav nav-tabs card-header-tabs">
           <li class="nav-item">
             <a class="nav-link" :class="{ active: tab === 'citas' }" @click="tab = 'citas'" href="#">
-              Mis Citas
+              📅 Mis Citas
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" :class="{ active: tab === 'recetas' }" @click="tab = 'recetas'" href="#">
-              Mis Recetas
+              💊 Mis Recetas
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" :class="{ active: tab === 'datos' }" @click="tab = 'datos'" href="#">
-              Mis Datos
+              👤 Mis Datos
             </a>
           </li>
         </ul>
       </div>
 
       <div class="card-body">
-        <!-- Mensaje global -->
-        <div v-if="mensaje && tab !== 'citas'" class="alert mb-3" :class="isError ? 'alert-danger' : 'alert-info'">
-          {{ mensaje }}
-        </div>
-
         <!-- TAB: CITAS -->
         <div v-if="tab === 'citas'">
           <div class="filtros mb-3">
@@ -119,25 +114,25 @@
                               v-if="puedeMarcarAtendida(c)" 
                               @click="marcarAtendida(c)"
                               title="Marcar como atendida">
-                        Atendida
+                        ✓
                       </button>
                       <button class="btn btn-sm btn-warning" 
                               v-if="puedeMarcarNoAsistio(c)" 
                               @click="marcarNoAsistio(c)"
                               title="Marcar como No Acudió">
-                        No Acudió
+                        ⊗
                       </button>
                       <button class="btn btn-sm btn-info"
                               v-if="puedeMarcarAtendida(c)"
                               @click="abrirReceta(c)"
                               :disabled="!puedeCrearReceta(c)"
                               :title="puedeCrearReceta(c) ? 'Generar receta' : 'Solo el día de la cita'">
-                        Receta
+                        💊
                       </button>
                       <button class="btn btn-sm btn-outline-info"
                               @click="abrirHistorial(c)"
                               title="Ver historial médico">
-                        Historial
+                        📋
                       </button>
                     </div>
                   </td>
@@ -151,7 +146,7 @@
         <div v-if="tab === 'recetas'">
           <div class="mb-3">
             <button class="btn btn-sm btn-primary" @click="cargarMisRecetas">
-              Actualizar Recetas
+              🔄 Actualizar Recetas
             </button>
           </div>
 
@@ -184,10 +179,10 @@
                     </ul>
                   </div>
                   <div class="mb-2">
-                    <strong>Indicaciones:</strong>
+                    <strong>Tratamientos:</strong>
                     <ul class="small mb-0">
-                      <li v-for="(ind, i) in parseIndicaciones(receta.Indicaciones)" :key="i">
-                        {{ ind }}
+                      <li v-for="(trat, i) in parseTratamientos(receta.Tratamientos)" :key="i">
+                        {{ trat }}
                       </li>
                     </ul>
                   </div>
@@ -218,7 +213,7 @@
                   <p><strong>Correo:</strong> {{ datosDoctor.correo }}</p>
                   <p><strong>Teléfono:</strong> {{ datosDoctor.telefono }}</p>
                   <small class="text-muted">
-                    Nota: Datos sensibles (Cédula, RFC, CURP, Nombre, Especialidad) solo pueden ser editados por recepción.
+                    ⚠️ Datos sensibles (Cédula, RFC, CURP, Nombre, Especialidad) solo pueden ser editados por recepción.
                   </small>
                 </div>
               </div>
@@ -328,13 +323,6 @@ export default {
     this.cargarDatosDoctor();
     this.cargarMisCitas();
   },
-  watch: {
-    tab(newTab) {
-      if (newTab === 'recetas' && this.recetas.length === 0) {
-        this.cargarMisRecetas();
-      }
-    }
-  },
   computed: {
     especialidad() {
       return this.datosDoctor.especialidad;
@@ -350,28 +338,23 @@ export default {
           }
         });
         
-        console.log('Datos del doctor recibidos:', response.data);
-        
         const data = response.data.doctor;
         this.datosDoctor = {
           nombreCompleto: `${data.Nombre} ${data.Paterno} ${data.Materno || ''}`.trim(),
           especialidad: data.Especialidad,
-          cedula: data.Cedula || 'No disponible',
-          rfc: data.Rfc || data.RFC || 'No disponible',
-          curp: data.CURP || 'No disponible',
-          correo: data.Correo || 'No disponible',
-          telefono: data.Telefono_cel || 'No disponible'
+          cedula: data.Cedula,
+          rfc: data.Rfc,
+          curp: data.CURP,
+          correo: data.Correo,
+          telefono: data.Telefono_cel
         };
         
-        this.form.correo = data.Correo || '';
-        this.form.telefono = data.Telefono_cel || '';
+        this.form.correo = data.Correo;
+        this.form.telefono = data.Telefono_cel;
         
         this.horario = response.data.horario || [];
-        console.log('Horario cargado:', this.horario);
       } catch (error) {
         console.error('Error al cargar datos del doctor:', error);
-        this.mensaje = 'Error al cargar datos del doctor: ' + (error.response?.data?.message || error.message);
-        this.isError = true;
       }
     },
     
@@ -403,11 +386,10 @@ export default {
             'x-user-role': localStorage.getItem('userRole')
           }
         });
-        console.log('Recetas recibidas:', response.data);
         this.recetas = response.data.recetas || [];
       } catch (error) {
         console.error('Error al cargar recetas:', error);
-        this.mensaje = 'Error al cargar recetas: ' + (error.response?.data?.message || error.message);
+        this.mensaje = 'Error al cargar recetas';
         this.isError = true;
       } finally {
         this.cargandoRecetas = false;
@@ -427,7 +409,7 @@ export default {
           }
         });
         
-        this.mensaje = 'Datos actualizados correctamente';
+        this.mensaje = '✓ Datos actualizados correctamente';
         await this.cargarDatosDoctor();
         
         setTimeout(() => {
@@ -562,7 +544,7 @@ export default {
     },
     
     onRecetaCreada() {
-      this.mensaje = 'Receta creada exitosamente';
+      this.mensaje = '✓ Receta creada exitosamente';
       this.mostrarReceta = false;
       this.cargarMisRecetas();
       setTimeout(() => {
@@ -572,46 +554,12 @@ export default {
     
     parseMedicamentos(medicamentos) {
       if (!medicamentos) return [];
-      
-      // Intentar parsear como JSON
-      try {
-        const parsed = JSON.parse(medicamentos);
-        if (Array.isArray(parsed)) {
-          return parsed.map(med => {
-            const parts = [];
-            if (med.nombre) parts.push(med.nombre);
-            if (med.dosis) parts.push(med.dosis);
-            if (med.frecuencia) parts.push(med.frecuencia);
-            if (med.duracion) parts.push(`por ${med.duracion} días`);
-            return parts.join(' - ');
-          });
-        }
-      } catch (e) {
-        // No es JSON, usar formato de líneas
-      }
-      
       return medicamentos.split('\n').filter(m => m.trim());
     },
     
-    parseIndicaciones(indicaciones) {
-      if (!indicaciones) return [];
-      
-      // Intentar parsear como JSON
-      try {
-        const parsed = JSON.parse(indicaciones);
-        if (Array.isArray(parsed)) {
-          return parsed.map(ind => {
-            if (typeof ind === 'string') return ind;
-            if (ind.descripcion) return ind.descripcion;
-            if (ind.texto) return ind.texto;
-            return JSON.stringify(ind);
-          });
-        }
-      } catch (e) {
-        // No es JSON, usar formato de líneas
-      }
-      
-      return indicaciones.split('\n').filter(i => i.trim());
+    parseTratamientos(tratamientos) {
+      if (!tratamientos) return [];
+      return tratamientos.split('\n').filter(t => t.trim());
     },
     
     logout() {

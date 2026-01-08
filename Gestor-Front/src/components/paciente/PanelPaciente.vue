@@ -1,4 +1,94 @@
 <template>
+  <!-- Comprobante de Cita -->
+  <ComprobanteCita 
+    v-if="mostrarComprobante" 
+    :cita="comprobanteData" 
+    @cerrar="cerrarComprobante"
+  />
+
+  <!-- Modal de Información de Cita -->
+  <div v-if="mostrarInfoCita" class="modal-overlay-info" @click.self="cerrarInfoCita">
+    <div class="modal-info">
+      <button class="btn-close-info" @click="cerrarInfoCita">×</button>
+      <div class="modal-header-info">
+        <div>
+          <h5 class="mb-1">Cita #{{ citaSeleccionada.Id_Cita }}</h5>
+          <small class="text-muted">{{ citaSeleccionada.Especialidad }} • Dr. {{ citaSeleccionada.Doctor }}</small>
+        </div>
+        <span class="badge" :class="getEstatusBadge(citaSeleccionada.Estatus || citaSeleccionada.Id_Estatus)">
+          {{ citaSeleccionada.Estatus || citaSeleccionada.Id_Estatus }}
+        </span>
+      </div>
+      <div class="modal-body-info">
+        <div class="info-card">
+          <h6 class="info-card-title">Datos de la Cita</h6>
+          <dl class="info-list">
+            <dt>Fecha</dt>
+            <dd>{{ citaSeleccionada.Fecha_cita_fmt || formatDate(citaSeleccionada.Fecha_cita) }}</dd>
+            <dt>Horario</dt>
+            <dd>{{ citaSeleccionada.Hora_Inicio_fmt || formatTime(citaSeleccionada.Hora_Inicio) }} - {{ citaSeleccionada.Hora_Fin_fmt || formatTime(citaSeleccionada.Hora_Fin) }}</dd>
+            <dt>Consultorio</dt>
+            <dd>{{ citaSeleccionada.Consultorio || 'Por asignar' }}</dd>
+          </dl>
+        </div>
+
+        <div class="info-card">
+          <h6 class="info-card-title">Información de Pago</h6>
+          <dl class="info-list">
+            <dt>Costo de Consulta</dt>
+            <dd class="fw-bold">${{ formatearCosto(citaSeleccionada.Costo || citaSeleccionada.Precio || 0) }}</dd>
+            <dt>Estado</dt>
+            <dd>
+              <span v-if="estaPagada(citaSeleccionada)" class="badge bg-success">Pagada</span>
+              <span v-else class="badge bg-warning text-dark">Por Pagar</span>
+            </dd>
+            <template v-if="citaSeleccionada.pago">
+              <dt>Método de Pago</dt>
+              <dd>{{ citaSeleccionada.pago.Metodo_Pago || citaSeleccionada.pago.metodo_pago || '—' }}</dd>
+              <dt>Fecha de Pago</dt>
+              <dd>{{ citaSeleccionada.pago.Fecha_Pago || citaSeleccionada.pago.fecha_pago || '—' }}</dd>
+            </template>
+          </dl>
+        </div>
+
+        <div class="info-card">
+          <h6 class="info-card-title">Política de Cancelación</h6>
+          <div class="politica-list">
+            <div class="politica-row">
+              <span>Más de 24 horas de anticipación</span>
+              <span class="badge bg-success">Reembolso 100%</span>
+            </div>
+            <div class="politica-row">
+              <span>Entre 12 y 24 horas antes</span>
+              <span class="badge bg-info">Reembolso 50%</span>
+            </div>
+            <div class="politica-row">
+              <span>Menos de 12 horas</span>
+              <span class="badge bg-danger">Sin reembolso</span>
+            </div>
+            <div class="politica-row">
+              <span>No presentarse</span>
+              <span class="badge bg-danger">Sin reembolso</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="citaSeleccionada.reembolso" class="info-card alert alert-success">
+          <h6 class="info-card-title">Reembolso Aplicado</h6>
+          <dl class="info-list">
+            <dt>Monto del Reembolso</dt>
+            <dd class="fw-bold text-success">${{ formatearCosto(citaSeleccionada.reembolso.monto) }}</dd>
+            <dt>Razón</dt>
+            <dd>{{ citaSeleccionada.reembolso.detalle }}</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="modal-footer-info">
+        <button class="btn btn-outline-secondary" @click="cerrarInfoCita">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="panel-paciente">
     <div class="card shadow-sm">
       <div class="card-header bg-primary text-white">
@@ -19,16 +109,13 @@
           <li class="nav-item">
             <a class="nav-link" :class="{active: tab==='mis'}" @click="tab='mis'" href="#">Mis Citas</a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link" :class="{active: tab==='tickets'}" @click="tab='tickets'; cargarTickets();" href="#">Tickets</a>
-          </li>
         </ul>
 
         <div v-if="tab==='agendar'" class="tab-content">
           <FormularioCita @cita-creada="onCitaCreada" />
         </div>
 
-        <div v-else-if="tab==='mis'" class="tab-content">
+        <div v-else class="tab-content">
           <div class="form-wrapper">
             <div class="card shadow-sm form-card">
               <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -90,7 +177,20 @@
                           <span class="badge" :class="getEstatusBadge(c.Estatus || c.Id_Estatus)">{{ c.Estatus || c.Id_Estatus }}</span>
                         </td>
                         <td>
-                          <button class="btn btn-sm btn-outline-danger" @click="confirmarCancelar(c)" :disabled="!puedeCancelar(c)">Cancelar</button>
+                          <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-outline-info" @click="verInfoCita(c)" title="Ver información">
+                              Info
+                            </button>
+                            <button class="btn btn-outline-primary" @click="verComprobante(c)" title="Ver comprobante">
+                              Comprobante
+                            </button>
+                            <button class="btn btn-success" v-if="puedePagar(c)" @click="confirmarPagar(c)">
+                              Pagar
+                            </button>
+                            <button class="btn btn-outline-danger" @click="confirmarCancelar(c)" :disabled="!puedeCancelar(c)">
+                              Cancelar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     </tbody>
@@ -101,69 +201,6 @@
           </div>
         </div>
 
-        <div v-else class="tab-content">
-          <div class="form-wrapper">
-            <div class="card shadow-sm form-card">
-              <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Tickets de Cita</h6>
-                <small class="text-muted">Resumen de tickets</small>
-              </div>
-              <div class="card-body">
-                <div v-if="mensajeTickets" class="alert" :class="errorTickets? 'alert-danger':'alert-info'">{{ mensajeTickets }}</div>
-
-                <div v-if="tickets.length===0" class="text-center text-muted py-4">
-                  <p class="mb-1">No hay tickets disponibles.</p>
-                  <small>Los tickets aparecen cuando agendas o pagas una cita.</small>
-                </div>
-
-                <div v-else class="row g-3">
-                  <div v-for="t in tickets" :key="t.Id_Cita" class="col-12 col-lg-6">
-                    <div class="card h-100 shadow-sm ticket-card" :class="getTicketAccentClass(t.Id_Estatus)">
-                      <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                        <div>
-                          <div class="d-flex align-items-center gap-2">
-                            <span class="ticket-folio">Cita #{{ t.Id_Cita }}</span>
-                            <span class="badge" :class="getEstatusBadge(t.Id_Estatus)">{{ t.Estatus_Label }}</span>
-                          </div>
-                          <div class="small text-muted mt-1">{{ t.Especialidad }} • {{ t.Doctor }}</div>
-                        </div>
-                      </div>
-                      <div class="card-body">
-                        <dl class="row mb-0">
-                          <dt class="col-5 text-muted">Fecha</dt>
-                          <dd class="col-7">{{ t.Fecha_cita_fmt }}</dd>
-                          <dt class="col-5 text-muted">Hora</dt>
-                          <dd class="col-7">{{ t.Hora_Inicio_fmt }} - {{ t.Hora_Fin_fmt }}</dd>
-                          <template v-if="t.pago">
-                            <dt class="col-5 text-muted">Pago</dt>
-                            <dd class="col-7 fw-semibold">${{ t.pago.Monto?.toFixed(2) || t.pago.monto?.toFixed(2) || t.pago.Monto || t.pago.monto }}</dd>
-                            <dt class="col-5 text-muted">Método</dt>
-                            <dd class="col-7">{{ t.pago.Metodo_Pago || t.pago.metodo_pago || '—' }}</dd>
-                          </template>
-                          <template v-else-if="!t.cancelada">
-                            <dt class="col-5 text-muted">Importe</dt>
-                            <dd class="col-7 fw-semibold text-danger">${{ (t.Costo || t.costo || t.Precio || t.precio || 0).toFixed(2) }}</dd>
-                          </template>
-                        </dl>
-                        <div class="alert alert-success py-2 mt-3 mb-0" v-if="t.reembolso">
-                          <div class="fw-semibold">Reembolso: ${{ t.reembolso.monto }}</div>
-                          <div class="small text-muted">{{ t.reembolso.detalle }}</div>
-                        </div>
-                        <div class="alert alert-warning py-2 mt-3 mb-0" v-if="t.cancelada && !t.reembolso">
-                          <div class="fw-semibold">Cita cancelada</div>
-                          <div class="small text-muted">Se informará el reembolso cuando esté disponible.</div>
-                        </div>
-                      </div>
-                      <div class="card-footer bg-transparent d-flex gap-2">
-                        <button class="btn btn-sm btn-success" v-if="puedePagar(t)" @click="confirmarPagar(t)">Pagar</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -171,6 +208,7 @@
 
 <script>
 import FormularioCita from '../FormularioCita.vue';
+import ComprobanteCita from '../ComprobanteCita.vue';
 import CitaService from '../../services/CitaService';
 import PagoService from '../../services/PagoService';
 import CancelacionService from '../../services/CancelacionService';
@@ -178,7 +216,7 @@ import CancelacionService from '../../services/CancelacionService';
 
 export default {
   name: 'PanelPaciente',
-  components: { FormularioCita },
+  components: { FormularioCita, ComprobanteCita },
   data(){
     return {
       tab: 'agendar',
@@ -202,7 +240,15 @@ export default {
 
       tickets: [],
       mensajeTickets: '',
-      errorTickets: false
+      errorTickets: false,
+      
+      // Comprobante
+      mostrarComprobante: false,
+      comprobanteData: null,
+      
+      // Info Cita
+      mostrarInfoCita: false,
+      citaSeleccionada: null
     }
   },
   mounted(){
@@ -367,6 +413,101 @@ export default {
       if (e.includes('cancelada') || ['3','4','5'].includes(e)) return 'ticket-accent-danger';
       return 'ticket-accent-info';
     },
+    
+    verComprobante(cita) {
+      this.comprobanteData = {
+        folio: cita.Id_Cita || cita.folio,
+        paciente: this.nombreCompleto,
+        fecha: cita.Fecha_cita_fmt || this.formatDate(cita.Fecha_cita || cita.fecha_cita),
+        horaInicio: cita.Hora_Inicio_fmt || this.formatTime(cita.Hora_Inicio) || '',
+        horaFin: cita.Hora_Fin_fmt || this.formatTime(cita.Hora_Fin) || '',
+        consultorio: cita.Consultorio || cita.NumConsultorio || 'Por asignar',
+        especialidad: cita.Especialidad || '',
+        doctor: cita.Doctor || '',
+        costo: cita.Costo || cita.Precio || 0,
+        lineaPago: null // Se generará automáticamente
+      };
+      
+      this.mostrarComprobante = true;
+    },
+    
+    cerrarComprobante() {
+      this.mostrarComprobante = false;
+      this.comprobanteData = null;
+    },
+    
+    verInfoCita(cita) {
+      this.citaSeleccionada = {
+        ...cita,
+        pago: null,
+        reembolso: null
+      };
+      
+      // Cargar información de pagos y reembolsos
+      Promise.all([
+        PagoService.pagosPorPaciente(localStorage.getItem('userId')).catch(() => []),
+        CancelacionService.reembolsosPaciente(localStorage.getItem('userId')).catch(() => [])
+      ]).then(([pagosRes, reembolsosRes]) => {
+        const pagos = Array.isArray(pagosRes) ? pagosRes : (pagosRes?.pagos || []);
+        const reembolsos = Array.isArray(reembolsosRes) ? reembolsosRes : (reembolsosRes?.reembolsos || []);
+        
+        // Buscar pago para esta cita
+        const pago = pagos.find(p => p.Id_Cita === cita.Id_Cita || p.id_cita === cita.Id_Cita);
+        if (pago) {
+          this.citaSeleccionada.pago = pago;
+        }
+        
+        // Buscar reembolso para esta cita
+        const reemb = reembolsos.find(r => r.Id_Cita === cita.Id_Cita || r.id_cita === cita.Id_Cita);
+        if (reemb) {
+          const monto = reemb.Monto_Reembolso || reemb.monto || reemb.Monto || 0;
+          const detalle = reemb.Detalle_Reembolso || reemb.detalle_reembolso || '';
+          
+          // Parsear el detalle para extraer información
+          let motivo = 'Reembolso registrado';
+          let montoCalculado = monto;
+          
+          if (detalle && typeof detalle === 'string') {
+            // Intenta extraer el monto del formato: "Reembolso: $700.00 (100%) - Motivo: doctor"
+            const montoMatch = detalle.match(/\$[\d,]+\.?\d*/);
+            if (montoMatch) {
+              montoCalculado = parseFloat(montoMatch[0].replace(/[\$,]/g, '')) || monto;
+            }
+            
+            // Extrae el motivo después de "Motivo:"
+            const motivoMatch = detalle.match(/Motivo:\s*(.+?)$/i);
+            if (motivoMatch) {
+              motivo = motivoMatch[1].trim();
+            } else {
+              motivo = detalle;
+            }
+          }
+          
+          this.citaSeleccionada.reembolso = {
+            monto: montoCalculado,
+            detalle: motivo
+          };
+        }
+      });
+      
+      this.mostrarInfoCita = true;
+    },
+    
+    cerrarInfoCita() {
+      this.mostrarInfoCita = false;
+      this.citaSeleccionada = null;
+    },
+    
+    estaPagada(cita) {
+      const estatus = cita.Estatus || String(cita.Id_Estatus || '');
+      return estatus === '2' || estatus.includes('Pagada') || estatus.includes('Atendida');
+    },
+    
+    formatearCosto(costo) {
+      if (!costo) return '0.00';
+      return parseFloat(costo).toFixed(2);
+    },
+    
     onCitaCreada(){
       this.tab='mis';
       this.cargarMisCitas();
@@ -416,10 +557,154 @@ export default {
 .form-card {
   width: 100%;
   max-width: 1024px;
+}
+
+/* Modal Info Styles */
+.modal-overlay-info {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1rem;
+}
+
+.modal-info {
+  background: white;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.btn-close-info {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6c757d;
+  z-index: 10;
+}
+
+.btn-close-info:hover {
+  color: #000;
+}
+
+.modal-header-info {
+  background: #0d6efd;
+  color: white;
+  padding: 1.5rem;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.modal-header-info h5 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.modal-header-info .badge {
+  margin-top: 0.25rem;
+}
+
+.modal-body-info {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.info-card {
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 1.25rem;
+  background: #f8f9fa;
+}
+
+.info-card.alert {
+  background: #d1e7dd;
+  border-color: #badbcc;
+}
+
+.info-card-title {
+  margin: 0 0 1rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #212529;
+  border-bottom: 2px solid #dee2e6;
+  padding-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 0.75rem 1rem;
+}
+
+.info-list dt {
+  font-weight: 600;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.info-list dd {
+  margin: 0;
+  color: #212529;
+  font-size: 0.9rem;
+}
+
+.politica-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.politica-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 4px;
+  border-left: 3px solid #dee2e6;
+}
+
+.modal-footer-info {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.text-success {
+  color: #28a745 !important;
+}
+
+.form-card {
   margin: 0 auto;
   min-width: 980px;
   box-sizing: border-box;
 }
+
 .form-card .card-body {
   padding: 1.25rem;
 }

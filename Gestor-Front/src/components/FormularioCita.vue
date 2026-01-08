@@ -1,4 +1,11 @@
 <template>
+  <!-- Comprobante de Cita -->
+  <ComprobanteCita 
+    v-if="mostrarComprobante" 
+    :cita="comprobanteData" 
+    @cerrar="cerrarComprobante"
+  />
+
   <!-- PANEL DESLIZABLE ALAN   -->
 <div class="sidebar" :class="{ open: sidebarOpen }">
   <div class="sidebar-header">
@@ -174,9 +181,13 @@
 
 <script>
 import CitaService from '../services/CitaService';
+import ComprobanteCita from './ComprobanteCita.vue';
 
 export default {
   name: 'FormularioCita',
+  components: {
+    ComprobanteCita
+  },
   emits: ['cita-creada'],
   data() {
     return {
@@ -207,6 +218,10 @@ export default {
       mensaje: '',
       isSuccess: false,
       sidebarOpen: false,
+      
+      // Comprobante
+      mostrarComprobante: false,
+      comprobanteData: null,
 
       currentUserName: '',
       currentPatientId: '',
@@ -468,12 +483,53 @@ export default {
         const res = await CitaService.agendarCitaAutenticado(dataToSend);
         this.mensaje = res.message || 'Cita agendada exitosamente.';
         this.isSuccess = true;
+        
+        // Preparar datos del comprobante
+        if (res.recibo) {
+          const doctorSeleccionado = this.doctores.find(d => d.Id_Doctor === this.selected.doctorId);
+          const especialidadSeleccionada = this.especialidades.find(e => e.Id_Especialidad === this.selected.especialidadId);
+          
+          // Funciones de formato
+          const formatDate = (val) => {
+            if (!val) return '';
+            if (typeof val === 'string' && val.includes('T')) return val.slice(0,10);
+            if (typeof val === 'string' && val.length >= 10) return val.slice(0,10);
+            const d = new Date(val);
+            if (Number.isNaN(d.getTime())) return '';
+            return d.toISOString().slice(0,10);
+          };
+          
+          const formatTime = (val) => {
+            if (!val) return '';
+            if (typeof val === 'string' && val.includes('T')) {
+              const [, time] = val.split('T');
+              return time ? time.slice(0,5) : '';
+            }
+            if (typeof val === 'string' && val.length >= 5) return val.slice(0,5);
+            const d = new Date(val);
+            if (Number.isNaN(d.getTime())) return '';
+            return d.toISOString().slice(11,16);
+          };
+          
+          this.comprobanteData = {
+            folio: res.recibo.folio || res.recibo.Id_Cita,
+            paciente: `${this.user.nombre} ${this.user.paterno || ''} ${this.user.materno || ''}`.trim(),
+            fecha: formatDate(this.cita.Fecha_Cita),
+            horaInicio: formatTime(this.cita.Hora_Inicio),
+            horaFin: formatTime(this.cita.Hora_Fin),
+            consultorio: res.recibo.consultorio || especialidadSeleccionada?.Consultorio,
+            especialidad: res.recibo.especialidad || especialidadSeleccionada?.Nombre,
+            doctor: res.recibo.doctor || doctorSeleccionado?.NombreCompleto,
+            costo: res.recibo.costo || especialidadSeleccionada?.Precio,
+            lineaPago: res.recibo.lineaPago
+          };
+          
+          this.mostrarComprobante = true;
+        }
+        
         this.resetForm();
         await this.cargarCitas();
         this.$emit('cita-creada');
-        if (res.recibo) {
-          alert(`Recibo generado. Folio: ${res.recibo.folio}\nDoctor: ${res.recibo.doctor}\nEspecialidad: ${res.recibo.especialidad}\nCosto: $${res.recibo.costo}`);
-        }
 
       } catch (error) {
         this.isSuccess = false;
@@ -527,6 +583,11 @@ export default {
 
     window.location.href = "/login.html";
   },
+    
+    cerrarComprobante() {
+      this.mostrarComprobante = false;
+      this.comprobanteData = null;
+    },
     
     resetForm() {
       this.cita.Fecha_Cita = '';

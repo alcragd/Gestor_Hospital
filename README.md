@@ -1,18 +1,9 @@
 # 🏥 Sistema Gestor Hospital
 
-**Estado:** ✅ **PROYECTO COMPLETO - LISTO PARA EVALUACIÓN**  
-**Fecha de Finalización:** Enero 2026  
-**Cobertura de Requisitos:** 23/23 (100%)  
+**Estado:** ✅ **PROYECTO COMPLETO**  
+**Fecha de Finalización:** Enero 2026   
 
 Sistema integral de gestión hospitalaria desarrollado con Node.js, Express y Vue.js 3. Incluye módulos completos para gestión de pacientes, doctores, citas médicas, servicios, farmacia y auditoría.
-
-## 📚 DOCUMENTACIÓN PRINCIPAL
-
-> **⭐ LEER PRIMERO:** [DOCUMENTACION_FINAL.md](DOCUMENTACION_FINAL.md) - Guía completa del proyecto
-
-- **[DOCUMENTACION_FINAL.md](DOCUMENTACION_FINAL.md)** - Documentación técnica completa con guía de demostración
-- **[COBERTURA_UI_REQUISITOS.md](COBERTURA_UI_REQUISITOS.md)** - Mapeo completo de 23 requisitos vs componentes UI
-- **[VEREDICTO_FINAL_AUDITORIA.md](VEREDICTO_FINAL_AUDITORIA.md)** - Validación de bitácoras y triggers
 
 ## 🚀 Tecnologías
 
@@ -167,7 +158,6 @@ Ver **[DOCUMENTACION_FINAL.md](DOCUMENTACION_FINAL.md) - Sección 4** para:
 - `Bitacora_Estatus_Citas` - Rastreo de cambios de estatus
 - `Bitacora_Historial_Medico` - Auditoría de accesos a historiales
 
-Ver **[VEREDICTO_FINAL_AUDITORIA.md](VEREDICTO_FINAL_AUDITORIA.md)** para análisis completo.
 
 ## 📁 Estructura del Proyecto
 
@@ -200,8 +190,8 @@ GestorHospital/
 │   │   └── assets/                    (CSS)
 │   └── public/                        (HTML por rol)
 ├── 📁 sql/                            
-│   └── GestorHospitalDB.bak          (Backup BD - 64 MB)
-└── 📁 scripts/                        (Vacío - limpiado)
+│   └── GestorHospitalDB.bak          (Backup BD)
+└── 📁 scripts/                        (Vacío)
 ```
 
 ## 🎓 Métricas del Sistema
@@ -215,17 +205,6 @@ GestorHospital/
 - **Líneas de Código Backend:** ~2,500
 - **Líneas de Código Frontend:** ~3,000
 
-## ✅ Validación de Completitud
-
-| Aspecto | Estado | Evidencia |
-|---------|--------|----------|
-| **Requisitos PDF** | ✅ 23/23 (100%) | [COBERTURA_UI_REQUISITOS.md](COBERTURA_UI_REQUISITOS.md) |
-| **Bitácoras Inmutables** | ✅ Completo | [VEREDICTO_FINAL_AUDITORIA.md](VEREDICTO_FINAL_AUDITORIA.md) |
-| **Frontend Funcional** | ✅ 21 componentes | Todos los roles operativos |
-| **Backend API** | ✅ 30+ rutas | CRUD completo |
-| **Validaciones BD** | ✅ 8 triggers | Constraints + Triggers activos |
-| **Documentación** | ✅ Completa | 4 archivos markdown |
-| **Base de Datos** | ✅ Limpia | 0 datos de prueba |
 
 ## 🎬 Demostración
 
@@ -456,53 +435,6 @@ GestorHospital/
     └── GestorHospitalDB.bak           # Backup completo de base de datos
 ```
 
-## 🔒 Seguridad
-
-- Autenticación basada en sesiones con localStorage
-- Validación de roles en rutas protegidas
-- Bloqueo de acceso por URL directa en páginas públicas
-- Sanitización de inputs en backend
-- Prepared statements para prevenir SQL injection
-
-## 🐛 Solución de Problemas
-
-### Backend no inicia
-
-- Verificar que SQL Server esté corriendo
-- Revisar credenciales en `src/config/db.config.js`
-- Verificar que la instancia SQL Server sea accesible
-- Comprobar que el puerto 3000 esté disponible
-
-### Error de conexión a base de datos
-
-- Verificar que la base de datos `GestorHospitalDB` exista
-- Comprobar credenciales de SQL Server en `db.config.js`
-- Verificar que SQL Server permita conexiones remotas
-- Revisar que el usuario tenga permisos sobre la base de datos
-
-### Frontend muestra página en blanco
-
-- Verificar que el backend esté corriendo en puerto 3000
-- Limpiar cache del navegador (Ctrl + Shift + R)
-- Revisar consola del navegador (F12) para errores
- - Confirmar que el rol del usuario coincide con la página (ej. doctor.html requiere rol 1)
-
-### Error de CORS
-
-- Asegurar que el backend incluya headers CORS correctos
-- Verificar que las URLs de API coincidan (localhost:3000)
-
-### Error de CORS
-
-- Asegurar que el backend incluya headers CORS correctos
-- Verificar que las URLs de API coincidan (localhost:3000)
-
-## 📝 Notas de Desarrollo
-
-- El proyecto usa Vue 3 sin Vue Router (navegación por páginas HTML)
-- Los componentes utilizan Composition API y Options API
-- Bootstrap se importa globalmente en `main.js`
-- Las validaciones de citas se ejecutan en el backend
 
 ## 🧪 Guía de Pruebas (Resumen)
 
@@ -518,11 +450,3 @@ GestorHospital/
     - Inventario, venta y actualización de stock.
 
 Consistencia: flujos completos sin errores, permisos correctos por rol. Ningún cambio de BD.
-
-## 👨‍💻 Autor
-
-Desarrollado como proyecto de Bases de Datos - ESCOM
-
-## 📄 Licencia
-
-Este proyecto es de uso académico.

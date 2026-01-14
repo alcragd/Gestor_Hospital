@@ -40,17 +40,38 @@ class CitaService {
                 },
                 body: JSON.stringify({ Id_Doctor, Fecha_Cita, Hora_Inicio, Hora_Fin })
             });
-                        if (!response.ok) {
-                                let payloadText = await response.text();
-                                let errorData;
-                                try { errorData = JSON.parse(payloadText); } catch { errorData = { message: payloadText }; }
-                                const composed = errorData.detalles
-                                    ? `${errorData.message || 'Error al agendar la cita'} - ${JSON.stringify(errorData.detalles)}`
-                                    : (errorData.details || errorData.message || 'Error al agendar la cita');
-                                const err = new Error(composed);
-                                err.payload = errorData;
-                                throw err;
-                        }
+            
+            if (!response.ok) {
+                let payloadText = await response.text();
+                let errorData;
+                try { 
+                    errorData = JSON.parse(payloadText); 
+                } catch { 
+                    errorData = { message: payloadText }; 
+                }
+                
+                // Construir mensaje de error descriptivo
+                let mensajeError = errorData.message || 'Error al agendar la cita';
+                
+                // Si hay detalles adicionales, agregarlos
+                if (errorData.detalles) {
+                    mensajeError += ` - ${JSON.stringify(errorData.detalles)}`;
+                } else if (errorData.details) {
+                    mensajeError += ` - ${JSON.stringify(errorData.details)}`;
+                }
+                
+                // Log para debugging
+                console.error('Error response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: errorData
+                });
+                
+                const err = new Error(mensajeError);
+                err.payload = errorData;
+                throw err;
+            }
+            
             return await response.json();
         } catch (error) {
             console.error('Error en CitaService.agendarCitaAutenticado:', error);

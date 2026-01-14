@@ -41,9 +41,41 @@ class CitaService {
 
             return { success: true, message: mensaje, data: result };
         } catch (error) {
-            console.error('Error al crear cita:', error.message);
+            console.error('❌ Error al crear cita - Full Error Object:', error);
             
-            throw new Error('Error al crear la cita: ' + error.message);
+            // Extraer el mensaje específico del error de SQL Server
+            // Los triggers pueden lanzar RAISERROR con mensajes específicos
+            let errorMessage = '';
+            
+            // Intentar extraer del mensaje principal
+            if (error.message && error.message.trim()) {
+                errorMessage = error.message;
+            }
+            // Intentar extraer del originalError (mssql lib)
+            else if (error.originalError?.message && error.originalError.message.trim()) {
+                errorMessage = error.originalError.message;
+            }
+            // Intentar extraer del .message del originalError de forma diferente
+            else if (error.originalError) {
+                errorMessage = String(error.originalError);
+            }
+            // Intentar extraer del texto del error
+            else if (error.text && error.text.trim()) {
+                errorMessage = error.text;
+            }
+            // Última opción - convertir el error a string
+            else if (String(error).trim()) {
+                errorMessage = String(error);
+            }
+            
+            // Fallback si todo falla
+            if (!errorMessage || !errorMessage.trim()) {
+                errorMessage = 'Error desconocido al crear la cita';
+                console.error('⚠️ No se pudo extraer mensaje del error:', JSON.stringify(error, null, 2));
+            }
+            
+            console.error('✋ Error Message Extracted:', errorMessage);
+            throw new Error(errorMessage);
         } finally {
             // No cerrar el pool - es global y se reutiliza
             // if (pool) pool.close();

@@ -195,10 +195,32 @@ exports.agendarCitaPaciente = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Error POST /api/citas/agendar:', error);
+        console.error('❌ Error POST /api/citas/agendar - Full Error:', error);
+        
+        // Extraer el mensaje de error real (puede venir de citaService o de la BD)
+        let mensajeError = '';
+        
+        // Intentar extraer diferentes formas de mensaje
+        if (error.message && error.message.trim()) {
+            mensajeError = error.message;
+        } else if (error.originalError?.message && error.originalError.message.trim()) {
+            mensajeError = error.originalError.message;
+        } else if (error.text && error.text.trim()) {
+            mensajeError = error.text;
+        } else if (String(error).trim()) {
+            mensajeError = String(error);
+        }
+        
+        // Fallback
+        if (!mensajeError || !mensajeError.trim()) {
+            mensajeError = 'Error al agendar la cita';
+        }
+        
+        console.error('✋ Mensaje de Error Extraído:', mensajeError);
+        
         return res.status(400).json({ 
-            message: 'Error al agendar la cita', 
-            details: error.message 
+            message: mensajeError,
+            details: error.message || String(error)
         });
     } finally {
         // Usamos el pool global; no cerrar aquí para evitar ECONNCLOSED

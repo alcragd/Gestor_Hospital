@@ -533,6 +533,7 @@ export default {
 
       } catch (error) {
         this.isSuccess = false;
+        console.error('Error al agendar cita:', error);
         
         // Parsear el payload del error para mensajes más específicos
         const payload = error.payload;
@@ -571,8 +572,11 @@ export default {
           } else {
             this.mensaje = `Fallo al agendar: ${error.message}`;
           }
+        } else if (error.message) {
+          // Mostrar mensaje de error del servidor directamente si es disponible
+          this.mensaje = error.message;
         } else {
-          this.mensaje = `Fallo al agendar: ${error.message}`;
+          this.mensaje = 'Error desconocido al agendar la cita. Intenta nuevamente.';
         }
       } finally {
         this.isLoading = false;

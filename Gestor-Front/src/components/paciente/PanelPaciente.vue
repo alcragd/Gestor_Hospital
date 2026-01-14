@@ -326,6 +326,26 @@ export default {
         });
       }
       
+      // Ordenar: primero estatus 1 y 2, luego por fecha más próxima
+      filtered.sort((a, b) => {
+        const estatusA = parseInt(a.Id_Estatus, 10);
+        const estatusB = parseInt(b.Id_Estatus, 10);
+        const prioridad = [1, 2]; // Estatus que van primero
+        
+        // Si uno tiene estatus prioritario y otro no
+        const aEnPrioridad = prioridad.includes(estatusA);
+        const bEnPrioridad = prioridad.includes(estatusB);
+        
+        if (aEnPrioridad !== bEnPrioridad) {
+          return aEnPrioridad ? -1 : 1;
+        }
+        
+        // Si ambos tienen el mismo nivel de prioridad, ordenar por fecha más próxima
+        const fechaA = new Date(a.Fecha_cita);
+        const fechaB = new Date(b.Fecha_cita);
+        return fechaA - fechaB;
+      });
+      
       // Aplicar formato
       this.citas = filtered.map(c => ({
         ...c,

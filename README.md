@@ -241,10 +241,8 @@ Para realizar la demostración completa del sistema:
    npm run dev
    ```
 
-2. **Seguir guía de demostración:**  
-   Ver **[DOCUMENTACION_FINAL.md](DOCUMENTACION_FINAL.md) - Sección 4**
 
-3. **Ejecutar 10 pasos secuenciales:**
+2. **Ejecutar 10 pasos secuenciales:**
    - Acceso al sistema (3 roles)
    - Crear cita (validaciones automáticas)
    - Registrar pago
@@ -260,8 +258,7 @@ Para realizar la demostración completa del sistema:
 
 **Institución:** ESCOM - Bases de Datos  
 **Periodo:** 2026-1  
-**Estado:** ✅ **COMPLETO Y LISTO PARA EVALUACIÓN**  
-**Calificación Esperada:** 9.8/10
+
 
 ---
 
